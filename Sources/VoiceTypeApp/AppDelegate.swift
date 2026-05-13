@@ -9,12 +9,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let dictionary = UserDictionary()
     let injector = TextInjector()
     let hotkeys = HotkeyManager()
+    let log = LogStore()
     lazy var engine = VoiceTypeEngine(
         settingsStore: settingsStore,
         memory: memory,
         dictionary: dictionary,
         recorder: AudioRecorder(),
-        injector: injector
+        injector: injector,
+        log: log
     )
 
     private var menuBar: MenuBarController?
@@ -73,7 +75,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             settingsWindowController = SettingsWindowController(
                 settingsStore: settingsStore,
                 memory: memory,
-                dictionary: dictionary
+                dictionary: dictionary,
+                log: log
             )
         }
         settingsWindowController?.show(tab: tab)

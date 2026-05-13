@@ -25,6 +25,7 @@ struct SettingsView: View {
                 case .languages: LanguagesSettingsView()
                 case .dictionary: DictionarySettingsView()
                 case .memory: MemorySettingsView()
+                case .logs: LogsSettingsView()
                 case .about: AboutSettingsView()
                 }
             }

@@ -19,6 +19,7 @@ public final class VoiceTypeEngine: ObservableObject {
 
     public let history: TranscriptHistory
     public let recorder: AudioRecorder
+    public let log: LogStore
 
     private let settingsStore: SettingsStore
     private let memory: PersonalMemory
@@ -32,6 +33,7 @@ public final class VoiceTypeEngine: ObservableObject {
         dictionary: UserDictionary,
         recorder: AudioRecorder,
         injector: TextInjector,
+        log: LogStore,
         urlSession: URLSession = .shared
     ) {
         self.settingsStore = settingsStore
@@ -39,6 +41,7 @@ public final class VoiceTypeEngine: ObservableObject {
         self.dictionary = dictionary
         self.recorder = recorder
         self.injector = injector
+        self.log = log
         self.urlSession = urlSession
         self.history = TranscriptHistory()
     }
@@ -64,9 +67,11 @@ public final class VoiceTypeEngine: ObservableObject {
         do {
             try await recorder.start()
             state = .recording(mode: mode)
+            log.info(.engine, "Recording started", detail: ["mode": mode == .translate ? "translate" : "transcribe"])
         } catch {
             state = .error(message: error.localizedDescription)
             AppLog.engine.error("recorder.start failed: \(String(describing: error), privacy: .public)")
+            log.error(.audio, "Recorder failed to start", detail: ["error": error.localizedDescription])
             try? await Task.sleep(nanoseconds: 1_500_000_000)
             state = .idle
         }
@@ -74,54 +79,89 @@ public final class VoiceTypeEngine: ObservableObject {
 
     public func endRecording() async {
         guard case .recording(let mode) = state else { return }
+        let startedAt = Date()
         do {
             state = .processing(mode: mode, stage: "Encoding…")
             let recording = try await recorder.stop()
+            let peakStr = String(format: "%.4f", recording.peakLevel)
+            let durStr = String(format: "%.2f", recording.duration)
+            log.info(.audio, "Recording captured",
+                     detail: ["duration_s": durStr, "peak": peakStr, "bytes": "\(recording.audio.count)"])
+
             if recording.audio.isEmpty || recording.duration < 0.25 {
                 state = .idle
-                AppLog.engine.info("Recording too short, ignoring.")
+                log.info(.engine, "Take too short — ignored", detail: ["duration_s": durStr])
                 return
             }
 
-            // Skip the API call on completely silent recordings to save the
-            // round-trip and avoid the classic "Thank you" hallucination.
-            // Threshold is very low (0.004) so real-but-quiet speech still
-            // makes it through — see HallucinationFilter for the rationale.
+            // Skip the API call on completely silent recordings.
             if recording.peakLevel < HallucinationFilter.silenceThreshold {
-                AppLog.engine.info("Silent recording (peak=\(recording.peakLevel, format: .fixed(precision: 4))), skipping transcribe.")
                 state = .idle
+                log.info(.filter, "Silent recording — skipped transcribe",
+                         detail: ["peak": peakStr, "threshold": "\(HallucinationFilter.silenceThreshold)"])
                 return
             }
 
             state = .processing(mode: mode, stage: "Transcribing…")
+            let sttProvider = settingsStore.settings.sttProvider.rawValue
+            let sttModel = settingsStore.settings.sttModel
+            let sttStart = Date()
             let raw = try await transcribe(recording)
+            let sttLatency = String(format: "%.2f", Date().timeIntervalSince(sttStart))
+            log.info(.stt, "Transcribed",
+                     detail: [
+                        "provider": sttProvider, "model": sttModel,
+                        "language": raw.detectedLanguage ?? "auto",
+                        "chars": "\(raw.text.count)",
+                        "latency_s": sttLatency
+                     ])
 
-            // Final guard: drop only if the transcript is an exact known
-            // Whisper outro AND the audio was effectively silent. Everything
-            // else — including short answers like "OK" or "好" — passes.
             switch HallucinationFilter.decide(transcript: raw.text, peakLevel: recording.peakLevel) {
             case .drop(let reason):
-                AppLog.engine.info("Dropped transcript — \(reason, privacy: .public)")
                 state = .idle
+                log.info(.filter, "Transcript dropped",
+                         detail: ["reason": reason, "text": String(raw.text.prefix(120))])
                 return
             case .keep:
                 break
             }
 
             state = .processing(mode: mode, stage: mode == .translate ? "Translating…" : "Refining…")
+            let llmProvider = settingsStore.settings.llmProvider.rawValue
+            let llmModel = settingsStore.settings.llmModel
+            let llmStart = Date()
             let finalText = try await refine(raw: raw, mode: mode)
+            let llmLatency = String(format: "%.2f", Date().timeIntervalSince(llmStart))
+            if settingsStore.settings.llmProvider != .disabled {
+                log.info(.llm, mode == .translate ? "Translated" : "Refined",
+                         detail: [
+                            "provider": llmProvider, "model": llmModel,
+                            "in_chars": "\(raw.text.count)", "out_chars": "\(finalText.count)",
+                            "latency_s": llmLatency
+                         ])
+            }
 
             state = .processing(mode: mode, stage: "Injecting…")
             try await injector.inject(finalText, method: settingsStore.settings.injectionMethod)
+            log.info(.inject, "Injected text",
+                     detail: ["chars": "\(finalText.count)", "method": settingsStore.settings.injectionMethod.rawValue])
 
             if settingsStore.settings.learningEnabled {
                 memory.ingest(transcript: finalText)
             }
             history.append(mode: mode, text: finalText)
 
+            let total = String(format: "%.2f", Date().timeIntervalSince(startedAt))
+            log.info(.engine, "Pipeline complete", detail: ["total_s": total])
+
             state = .idle
         } catch {
             AppLog.engine.error("pipeline failed: \(String(describing: error), privacy: .public)")
+            log.error(.engine, "Pipeline failed",
+                      detail: [
+                        "error": error.localizedDescription,
+                        "type": String(describing: type(of: error))
+                      ])
             state = .error(message: error.localizedDescription)
             try? await Task.sleep(nanoseconds: 2_500_000_000)
             state = .idle
@@ -132,6 +172,7 @@ public final class VoiceTypeEngine: ObservableObject {
         if case .recording = state {
             _ = try? await recorder.stop()
             state = .idle
+            log.info(.engine, "Recording cancelled")
         }
     }
 
