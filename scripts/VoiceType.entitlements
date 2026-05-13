@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Required because we sign with hardened runtime. Without these,
+         macOS silently denies access to protected resources on launch
+         and the user never even sees the system prompt. -->
+    <key>com.apple.security.device.audio-input</key>
+    <true/>
+    <key>com.apple.security.device.microphone</key>
+    <true/>
+    <!-- Allow synthesizing keyboard events for paste injection. -->
+    <key>com.apple.security.automation.apple-events</key>
+    <true/>
+    <!-- We are not sandboxed; this app is for personal use. -->
+</dict>
+</plist>

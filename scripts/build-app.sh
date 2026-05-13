@@ -77,8 +77,12 @@ cat > "${APP_DIR}/Contents/Info.plist" <<PLIST
 </plist>
 PLIST
 
-echo "▸ Signing with '${CERT_CN}'"
-codesign --force --deep --sign "${CERT_CN}" --options runtime "${APP_DIR}" >/dev/null
+ENTITLEMENTS="$(dirname "$0")/VoiceType.entitlements"
+echo "▸ Signing with '${CERT_CN}' + entitlements"
+codesign --force --deep --sign "${CERT_CN}" \
+    --options runtime \
+    --entitlements "${ENTITLEMENTS}" \
+    "${APP_DIR}" >/dev/null
 
 echo
 echo "✅ ${APP_DIR}"
