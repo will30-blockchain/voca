@@ -21,6 +21,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var menuBar: MenuBarController?
     private var hudController: HUDWindowController?
     private var settingsWindowController: SettingsWindowController?
+    private var dashboardController: DashboardWindowController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppLog.app.info("VoiceType launched.")
@@ -32,6 +33,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         menuBar = MenuBarController(
             engine: engine,
+            openDashboard: { [weak self] in self?.showDashboard() },
             openSettings: { [weak self] in self?.showSettings() },
             openMemory: { [weak self] in self?.showSettings(tab: .memory) },
             openDictionary: { [weak self] in self?.showSettings(tab: .dictionary) }
@@ -39,21 +41,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         hudController = HUDWindowController(engine: engine, settingsStore: settingsStore)
 
-        // Wire hotkeys → engine.
-        hotkeys.onBegin = { [weak self] mode in
-            Task { await self?.engine.beginRecording(mode: mode) }
-        }
-        hotkeys.onEnd = { [weak self] _ in
-            Task { await self?.engine.endRecording() }
-        }
-        hotkeys.onCancel = { [weak self] in
-            Task { await self?.engine.cancelRecording() }
+        // Wire hotkeys → engine (tap-toggle).
+        hotkeys.onToggle = { [weak self] mode in
+            Task { await self?.engine.toggleRecording(mode: mode) }
         }
         hotkeys.start()
 
-        // First-run cue.
+        showDashboard()
         if !UserDefaults.standard.bool(forKey: "vt.didFirstRun") {
             UserDefaults.standard.set(true, forKey: "vt.didFirstRun")
+            // Nudge them to providers on the very first run.
             showSettings(tab: .providers)
         }
     }
@@ -73,5 +70,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             )
         }
         settingsWindowController?.show(tab: tab)
+    }
+
+    func showDashboard() {
+        if dashboardController == nil {
+            dashboardController = DashboardWindowController(
+                engine: engine,
+                settingsStore: settingsStore,
+                memory: memory,
+                history: engine.history,
+                openSettings: { [weak self] in self?.showSettings() },
+                openProviders: { [weak self] in self?.showSettings(tab: .providers) },
+                openDictionary: { [weak self] in self?.showSettings(tab: .dictionary) },
+                openMemory: { [weak self] in self?.showSettings(tab: .memory) }
+            )
+        }
+        dashboardController?.show()
     }
 }

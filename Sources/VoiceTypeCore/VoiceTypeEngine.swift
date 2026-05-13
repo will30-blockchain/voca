@@ -17,6 +17,8 @@ public enum EngineState: Sendable, Equatable {
 public final class VoiceTypeEngine: ObservableObject {
     @Published public private(set) var state: EngineState = .idle
 
+    public let history: TranscriptHistory
+
     private let settingsStore: SettingsStore
     private let memory: PersonalMemory
     private let dictionary: UserDictionary
@@ -38,9 +40,24 @@ public final class VoiceTypeEngine: ObservableObject {
         self.recorder = recorder
         self.injector = injector
         self.urlSession = urlSession
+        self.history = TranscriptHistory()
     }
 
-    // MARK: - Recording control
+    /// Tap-toggle entry point. If idle, starts a recording in the given mode.
+    /// If recording, stops it and pushes the result through the pipeline.
+    /// If processing, ignores the tap (so a double-tap won't pile up requests).
+    public func toggleRecording(mode: DictationMode) async {
+        switch state {
+        case .idle:
+            await beginRecording(mode: mode)
+        case .recording:
+            await endRecording()
+        case .processing:
+            AppLog.engine.info("Ignored toggle while processing.")
+        case .error:
+            state = .idle
+        }
+    }
 
     public func beginRecording(mode: DictationMode) async {
         guard case .idle = state else { return }
@@ -50,6 +67,8 @@ public final class VoiceTypeEngine: ObservableObject {
         } catch {
             state = .error(message: error.localizedDescription)
             AppLog.engine.error("recorder.start failed: \(String(describing: error), privacy: .public)")
+            try? await Task.sleep(nanoseconds: 1_500_000_000)
+            state = .idle
         }
     }
 
@@ -76,12 +95,13 @@ public final class VoiceTypeEngine: ObservableObject {
             if settingsStore.settings.learningEnabled {
                 memory.ingest(transcript: finalText)
             }
+            history.append(mode: mode, text: finalText)
 
             state = .idle
         } catch {
             AppLog.engine.error("pipeline failed: \(String(describing: error), privacy: .public)")
             state = .error(message: error.localizedDescription)
-            try? await Task.sleep(nanoseconds: 1_500_000_000)
+            try? await Task.sleep(nanoseconds: 2_500_000_000)
             state = .idle
         }
     }

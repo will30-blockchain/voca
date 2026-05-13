@@ -8,17 +8,20 @@ final class MenuBarController {
     private let engine: VoiceTypeEngine
     private var cancellables: Set<AnyCancellable> = []
 
+    private let openDashboard: () -> Void
     private let openSettings: () -> Void
     private let openMemory: () -> Void
     private let openDictionary: () -> Void
 
     init(
         engine: VoiceTypeEngine,
+        openDashboard: @escaping () -> Void,
         openSettings: @escaping () -> Void,
         openMemory: @escaping () -> Void,
         openDictionary: @escaping () -> Void
     ) {
         self.engine = engine
+        self.openDashboard = openDashboard
         self.openSettings = openSettings
         self.openMemory = openMemory
         self.openDictionary = openDictionary
@@ -69,6 +72,12 @@ final class MenuBarController {
         menu.addItem(header)
         menu.addItem(.separator())
 
+        let dashboard = NSMenuItem(title: "Open Dashboard", action: #selector(handleDashboard), keyEquivalent: "0")
+        dashboard.target = self
+        menu.addItem(dashboard)
+
+        menu.addItem(.separator())
+
         let dict = NSMenuItem(title: "Dictionary…", action: #selector(handleDictionary), keyEquivalent: "")
         dict.target = self
         menu.addItem(dict)
@@ -103,6 +112,7 @@ final class MenuBarController {
         }
     }
 
+    @objc private func handleDashboard() { openDashboard() }
     @objc private func handleSettings() { openSettings() }
     @objc private func handleMemory() { openMemory() }
     @objc private func handleDictionary() { openDictionary() }

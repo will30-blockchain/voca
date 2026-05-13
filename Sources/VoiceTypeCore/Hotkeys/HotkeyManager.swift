@@ -3,35 +3,43 @@ import AppKit
 import CoreGraphics
 import Carbon.HIToolbox
 
-/// Detects global modifier hold patterns:
-///   - Right Option held alone → transcribe mode
-///   - Right Option + Right Shift held together → translate mode
+/// Tap-toggle global hotkey:
+///   - Tap **Right Option** → toggle transcribe mode (start; tap again to stop).
+///   - Tap **Right Option + Right Shift** (both pressed together) → toggle
+///     translate mode.
 ///
-/// Reliability hinges on inspecting the *device-dependent* bits of
-/// `NSEvent.ModifierFlags` (the bottom 16 bits of the raw value), because
-/// the device-independent `.option` / `.shift` flags don't distinguish
-/// left versus right modifier keys.
+/// A "tap" is a key-down followed by a key-up within `tapWindow` (default
+/// 0.5 s). Anything longer is treated as a hold (for accent input like
+/// Option+E → "é") and ignored, so the dictation flow doesn't clash with
+/// macOS dead-key composition.
+///
+/// State machine fires:
+///   - `onToggle(.transcribe)` / `onToggle(.translate)` for the user's tap.
+///
+/// The controller (VoiceTypeEngine) is the source of truth for whether a
+/// recording is currently active; this class only emits toggle intents.
 @MainActor
 public final class HotkeyManager {
-    public var onBegin: ((DictationMode) -> Void)?
-    public var onEnd: ((DictationMode) -> Void)?
-    public var onCancel: (() -> Void)?
+    public var onToggle: ((DictationMode) -> Void)?
 
-    // Device-dependent bit masks (see IOLLEvent.h / NX_DEVICE…KEYMASK).
+    // Device-dependent modifier bits (bottom 16 bits of NSEvent.ModifierFlags).
     private static let rightOptionBit: UInt = 0x40
     private static let rightShiftBit: UInt  = 0x04
+
+    /// Max duration of a key press that still counts as a "tap".
+    public var tapWindow: TimeInterval = 0.5
 
     private var tap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
 
-    /// The mode currently signaled to listeners.
-    private var activeMode: DictationMode?
-    /// Pending begin work that we delay slightly to filter out accidental
-    /// Option-key brushes (Option+E for "é" etc.). Cancelled on early release.
-    private var pendingBegin: DispatchWorkItem?
-    /// Minimum hold duration before we commit to a `begin`. Tuned to be
-    /// shorter than any one-shot dead-key composition the user would do.
-    public var holdDelay: TimeInterval = 0.18
+    /// Timestamp when Right Option last went down, or nil if it's up.
+    private var rightOptionDownAt: TimeInterval?
+    /// Was Right Shift held at the moment Right Option went down?
+    private var translateLatched = false
+
+    /// Last computed states so we can detect transitions.
+    private var lastRightOption = false
+    private var lastRightShift = false
 
     public init() {}
 
@@ -90,53 +98,32 @@ public final class HotkeyManager {
     private func evaluate(rawFlags: UInt) {
         let rightOption = (rawFlags & Self.rightOptionBit) != 0
         let rightShift = (rawFlags & Self.rightShiftBit) != 0
-
-        let desired: DictationMode?
-        if rightOption && rightShift {
-            desired = .translate
-        } else if rightOption {
-            desired = .transcribe
-        } else {
-            desired = nil
+        defer {
+            lastRightOption = rightOption
+            lastRightShift = rightShift
         }
 
-        if desired == activeMode && pendingBegin == nil { return }
-
-        // If the user lifts before the hold delay elapses, cancel the pending
-        // begin so brief Option taps don't trigger a recording.
-        if desired == nil {
-            pendingBegin?.cancel()
-            pendingBegin = nil
-            if let active = activeMode {
-                activeMode = nil
-                onEnd?(active)
+        // Right Option transition is the only thing that decides a tap.
+        if rightOption && !lastRightOption {
+            // Key down.
+            rightOptionDownAt = Date().timeIntervalSince1970
+            translateLatched = rightShift
+        } else if !rightOption && lastRightOption {
+            // Key up.
+            defer { rightOptionDownAt = nil; translateLatched = false }
+            guard let downAt = rightOptionDownAt else { return }
+            let elapsed = Date().timeIntervalSince1970 - downAt
+            guard elapsed <= tapWindow else {
+                AppLog.hotkey.debug("Ignored long hold of Right Option (\(elapsed, format: .fixed(precision: 2)) s)")
+                return
             }
-            return
+            let mode: DictationMode = (translateLatched || rightShift) ? .translate : .transcribe
+            onToggle?(mode)
         }
 
-        if let next = desired {
-            if let prev = activeMode, prev != next {
-                // User shifted modes mid-press (e.g. added Right Shift).
-                onCancel?()
-                activeMode = nil
-            }
-
-            // Already engaged? Nothing to do.
-            if activeMode == next { return }
-
-            // Schedule the begin after the hold delay so a quick Option tap
-            // (used for accented characters) doesn't trip dictation.
-            pendingBegin?.cancel()
-            let item = DispatchWorkItem { [weak self] in
-                guard let self else { return }
-                self.pendingBegin = nil
-                if self.activeMode == nil {
-                    self.activeMode = next
-                    self.onBegin?(next)
-                }
-            }
-            pendingBegin = item
-            DispatchQueue.main.asyncAfter(deadline: .now() + holdDelay, execute: item)
-        }
+        // If Right Shift is released while Right Option is still down, we keep
+        // the original `translateLatched` value — once you decided "this is a
+        // translate tap" by holding shift at key-down, you don't want to lose
+        // it because shift happened to flick up early.
     }
 }
