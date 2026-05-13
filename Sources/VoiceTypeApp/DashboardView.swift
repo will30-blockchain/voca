@@ -144,7 +144,7 @@ struct DashboardView: View {
                 }
             }
             if engineIsRecording {
-                Waveform(level: engine.recorder.level, color: indicatorColor, isLive: true)
+                Waveform(recorder: engine.recorder, color: indicatorColor, isLive: true)
                     .frame(height: 30)
             }
         }
