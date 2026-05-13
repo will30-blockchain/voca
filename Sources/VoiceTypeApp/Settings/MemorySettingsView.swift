@@ -7,67 +7,114 @@ struct MemorySettingsView: View {
     @State private var didLoadDraft = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: DesignTokens.Space.lg) {
-            Text("Personal memory").font(.title2.bold())
-            Text("Anything you write here is appended to the LLM editor's context as background facts. The more specific the better — name, role, projects, recurring people.")
-                .foregroundStyle(.secondary)
+        SettingsPage(
+            title: "Personal memory",
+            subtitle: "Background context VoiceType appends to the LLM editor. The more specific the better — name, role, projects, recurring people."
+        ) {
+            factsCard
+            learnedPhrasesCard
+            footerCard
+        }
+    }
 
-            TextEditor(text: $draftFacts)
-                .font(DesignTokens.Font.body)
-                .frame(minHeight: 140)
-                .overlay(
-                    RoundedRectangle(cornerRadius: DesignTokens.Radius.md)
-                        .stroke(DesignTokens.Color.border)
-                )
-                .onChange(of: draftFacts) { _, newValue in
-                    if didLoadDraft { memory.setPersonalFacts(newValue) }
-                }
-                .onAppear {
-                    draftFacts = memory.snapshot.personalFacts
-                    didLoadDraft = true
-                }
+    // MARK: - Cards
 
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Auto-learned phrases").font(.headline)
-                Text("These are phrases you've spoken more than once. VoiceType uses them as transcription hints.")
-                    .font(DesignTokens.Font.caption)
-                    .foregroundStyle(.secondary)
+    private var factsCard: some View {
+        Card {
+            VStack(alignment: .leading, spacing: DesignTokens.Space.md) {
+                SectionTitle("Personal facts")
+
+                TextEditor(text: $draftFacts)
+                    .font(DesignTokens.Typography.body)
+                    .scrollContentBackground(.hidden)
+                    .padding(DesignTokens.Space.sm)
+                    .frame(minHeight: 160)
+                    .background(
+                        RoundedRectangle(cornerRadius: DesignTokens.Radius.sm, style: .continuous)
+                            .fill(DesignTokens.Color.surfaceSunken)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: DesignTokens.Radius.sm, style: .continuous)
+                            .stroke(DesignTokens.Color.borderSubtle, lineWidth: 0.5)
+                    )
+                    .onChange(of: draftFacts) { _, newValue in
+                        if didLoadDraft { memory.setPersonalFacts(newValue) }
+                    }
+                    .onAppear {
+                        draftFacts = memory.snapshot.personalFacts
+                        didLoadDraft = true
+                    }
+
+                Text("Free-form. Saved as you type.")
+                    .font(DesignTokens.Typography.caption)
+                    .vtTertiaryText()
+            }
+        }
+    }
+
+    private var learnedPhrasesCard: some View {
+        Card {
+            VStack(alignment: .leading, spacing: DesignTokens.Space.md) {
+                SectionTitle("Auto-learned phrases")
+                Text("Phrases you've spoken more than once. VoiceType uses them as transcription hints.")
+                    .font(DesignTokens.Typography.caption)
+                    .vtTertiaryText()
+
                 let phrases = memory.topPhrases(limit: 40)
                 if phrases.isEmpty {
                     Text("No learned phrases yet — they appear after a few dictations.")
-                        .font(DesignTokens.Font.caption)
-                        .foregroundStyle(.tertiary)
+                        .font(DesignTokens.Typography.caption)
+                        .vtTertiaryText()
+                        .frame(maxWidth: .infinity, minHeight: 80, alignment: .center)
+                        .background(
+                            RoundedRectangle(cornerRadius: DesignTokens.Radius.sm, style: .continuous)
+                                .fill(DesignTokens.Color.surfaceSunken)
+                        )
                 } else {
                     ScrollView {
-                        WrapHStack(items: phrases, spacing: 6) { phrase in
+                        WrapHStack(items: phrases, spacing: DesignTokens.Space.xs) { phrase in
                             Text(phrase)
-                                .font(DesignTokens.Font.body)
-                                .padding(.horizontal, 8).padding(.vertical, 3)
+                                .font(DesignTokens.Typography.captionEmphasis)
+                                .foregroundStyle(DesignTokens.Color.accent)
+                                .padding(.horizontal, DesignTokens.Space.sm)
+                                .padding(.vertical, 4)
                                 .background(
-                                    Capsule().fill(DesignTokens.Color.surfaceElevated)
+                                    Capsule().fill(DesignTokens.Color.accentTint)
                                 )
-                                .overlay(Capsule().stroke(DesignTokens.Color.border))
                         }
+                        .padding(.vertical, DesignTokens.Space.xs)
                     }
-                    .frame(maxHeight: 200)
+                    .frame(maxHeight: 220)
                 }
             }
+        }
+    }
 
-            HStack {
-                Text("Total dictations: \(memory.snapshot.totalDictations)")
-                    .font(DesignTokens.Font.caption)
-                    .foregroundStyle(.secondary)
-                Spacer()
+    private var footerCard: some View {
+        Card {
+            HStack(alignment: .center, spacing: DesignTokens.Space.md) {
+                VStack(alignment: .leading, spacing: DesignTokens.Space.xxs) {
+                    Text("Total dictations")
+                        .font(DesignTokens.Typography.bodyEmphasis)
+                        .vtPrimaryText()
+                    Text("\(memory.snapshot.totalDictations)")
+                        .font(DesignTokens.Typography.title2)
+                        .vtSecondaryText()
+                }
+                Spacer(minLength: 0)
                 Button(role: .destructive) {
                     memory.reset()
                     draftFacts = ""
                 } label: {
                     Label("Reset memory", systemImage: "trash")
                 }
+                .buttonStyle(.bordered)
             }
         }
     }
 }
+
+// MARK: - Layout
 
 /// Lightweight wrapping HStack for tag-cloud layout.
 struct WrapHStack<Item: Hashable, Content: View>: View {
@@ -85,7 +132,7 @@ struct WrapHStack<Item: Hashable, Content: View>: View {
 }
 
 struct FlowLayout: Layout {
-    var spacing: CGFloat = 8
+    var spacing: CGFloat = DesignTokens.Space.sm
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         let width = proposal.width ?? .infinity

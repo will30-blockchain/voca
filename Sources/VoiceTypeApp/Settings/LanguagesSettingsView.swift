@@ -5,44 +5,76 @@ struct LanguagesSettingsView: View {
     @EnvironmentObject var store: SettingsStore
 
     var body: some View {
-        VStack(alignment: .leading, spacing: DesignTokens.Space.lg) {
-            Text("Languages").font(.title2.bold())
+        SettingsPage(
+            title: "Languages",
+            subtitle: "Set your dictation language and the source-target pair used in translate mode."
+        ) {
+            primaryCard
+            translateCard
+        }
+    }
 
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Primary dictation language").font(.headline)
-                Text("Auto-detect mixes Chinese/English smoothly. Pin a language if your accent confuses Whisper.")
-                    .font(DesignTokens.Font.caption)
-                    .foregroundStyle(.secondary)
+    private var primaryCard: some View {
+        Card {
+            VStack(alignment: .leading, spacing: DesignTokens.Space.md) {
+                SectionTitle("Primary dictation")
+                Text("Language")
+                    .font(DesignTokens.Typography.bodyEmphasis)
+                    .vtPrimaryText()
                 Picker("", selection: bind(\.primaryLanguage)) {
-                    ForEach(SupportedLanguage.allCases, id: \.rawValue) { l in
-                        Text(l.displayName).tag(l.rawValue)
+                    ForEach(SupportedLanguage.allCases, id: \.rawValue) { language in
+                        Text(language.displayName).tag(language.rawValue)
                     }
                 }
                 .pickerStyle(.menu)
                 .labelsHidden()
+                Text("Auto-detect mixes Chinese and English smoothly. Pin a language if your accent confuses Whisper.")
+                    .font(DesignTokens.Typography.caption)
+                    .vtTertiaryText()
             }
+        }
+    }
 
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Translate mode").font(.headline)
-                HStack {
-                    Picker("Source", selection: bind(\.translateSourceLanguage)) {
-                        ForEach(SupportedLanguage.allCases, id: \.rawValue) { l in
-                            Text(l.displayName).tag(l.rawValue)
+    private var translateCard: some View {
+        Card {
+            VStack(alignment: .leading, spacing: DesignTokens.Space.md) {
+                SectionTitle("Translate mode")
+                HStack(alignment: .center, spacing: DesignTokens.Space.md) {
+                    VStack(alignment: .leading, spacing: DesignTokens.Space.xs) {
+                        Text("Source")
+                            .font(DesignTokens.Typography.bodyEmphasis)
+                            .vtPrimaryText()
+                        Picker("", selection: bind(\.translateSourceLanguage)) {
+                            ForEach(SupportedLanguage.allCases, id: \.rawValue) { language in
+                                Text(language.displayName).tag(language.rawValue)
+                            }
                         }
+                        .pickerStyle(.menu)
+                        .labelsHidden()
                     }
+
                     Image(systemName: "arrow.right")
-                    Picker("Target", selection: bind(\.translateTargetLanguage)) {
-                        ForEach(SupportedLanguage.allCases.filter { $0 != .auto }, id: \.rawValue) { l in
-                            Text(l.displayName).tag(l.rawValue)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(DesignTokens.Color.textTertiary)
+                        .padding(.top, DesignTokens.Space.lg)
+
+                    VStack(alignment: .leading, spacing: DesignTokens.Space.xs) {
+                        Text("Target")
+                            .font(DesignTokens.Typography.bodyEmphasis)
+                            .vtPrimaryText()
+                        Picker("", selection: bind(\.translateTargetLanguage)) {
+                            ForEach(SupportedLanguage.allCases.filter { $0 != .auto }, id: \.rawValue) { language in
+                                Text(language.displayName).tag(language.rawValue)
+                            }
                         }
+                        .pickerStyle(.menu)
+                        .labelsHidden()
                     }
                 }
-                Text("Hold Right Option + Right Shift to dictate in source and paste the translated result in target.")
-                    .font(DesignTokens.Font.caption)
-                    .foregroundStyle(.secondary)
+                Text("Hold Right Option + Right Shift to dictate in the source language and paste the translated result in the target language.")
+                    .font(DesignTokens.Typography.caption)
+                    .vtTertiaryText()
             }
-
-            Spacer()
         }
     }
 

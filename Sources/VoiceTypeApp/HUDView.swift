@@ -3,6 +3,10 @@ import VoiceTypeCore
 
 /// Floating recording pill at the bottom of the screen.
 /// Cancel (✗) on the left · live waveform · confirm (✓) on the right.
+///
+/// Visual language: SuperCard "Professional Warmth" — warm light glass on
+/// off-white paper, single hairline border, soft lift shadow. The pill reads
+/// as a small card resting on the desktop, not as a HUD floating in dark.
 struct HUDView: View {
     @ObservedObject var engine: VoiceTypeEngine
     @ObservedObject var recorder: AudioRecorder
@@ -10,49 +14,103 @@ struct HUDView: View {
     var onConfirm: () -> Void
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: DesignTokens.Space.sm) {
             cancelButton
             Waveform(recorder: recorder, color: accentColor, isLive: isRecording)
-                .frame(height: 36)
+                .frame(height: 28)
                 .frame(maxWidth: .infinity)
             confirmButton
         }
         .padding(.horizontal, 10)
-        .padding(.vertical, 10)
-        .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(.ultraThinMaterial)
-                .shadow(color: .black.opacity(0.32), radius: 18, x: 0, y: 8)
+        .padding(.vertical, 8)
+        .frame(width: 360)
+        .background(pillBackground)
+        .overlay(
+            RoundedRectangle(cornerRadius: DesignTokens.Radius.pill, style: .continuous)
+                .strokeBorder(DesignTokens.Color.border, lineWidth: 0.5)
         )
-        .padding(8)
+        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.pill, style: .continuous))
+        .shadow(color: .black.opacity(0.12), radius: 20, x: 0, y: 6)
+        .padding(10)
     }
+
+    // MARK: - Background
+
+    /// Warm light glass: a translucent material layered over a creamy off-white
+    /// tinted by the active accent. Keeps the pill reading as paper, not chrome.
+    private var pillBackground: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: DesignTokens.Radius.pill, style: .continuous)
+                .fill(DesignTokens.Color.surface)
+            RoundedRectangle(cornerRadius: DesignTokens.Radius.pill, style: .continuous)
+                .fill(.ultraThinMaterial)
+                .opacity(0.6)
+            RoundedRectangle(cornerRadius: DesignTokens.Radius.pill, style: .continuous)
+                .fill(accentTintColor.opacity(0.08))
+        }
+    }
+
+    // MARK: - State helpers
 
     private var isRecording: Bool {
         if case .recording = engine.state { return true }
         return false
     }
 
+    /// Foreground accent — drives confirm fill, waveform tint, and the
+    /// surrounding warm wash. Falls back to neutral text gray when idle.
     private var accentColor: Color {
         switch engine.state {
-        case .recording(.translate), .processing(.translate, _): return DesignTokens.Color.translate
-        case .recording(.transcribe), .processing(.transcribe, _): return DesignTokens.Color.recording
-        case .error: return .yellow
-        default: return .secondary
+        case .recording(.translate), .processing(.translate, _):
+            return DesignTokens.Color.translate
+        case .recording(.transcribe), .processing(.transcribe, _):
+            return DesignTokens.Color.recording
+        case .error:
+            return DesignTokens.Color.warning
+        default:
+            return DesignTokens.Color.textTertiary
         }
     }
 
+    /// Accent used to tint the pill itself — softer fallback so the idle pill
+    /// stays neutral warm rather than gray.
+    private var accentTintColor: Color {
+        switch engine.state {
+        case .recording(.translate), .processing(.translate, _):
+            return DesignTokens.Color.translate
+        case .recording(.transcribe), .processing(.transcribe, _):
+            return DesignTokens.Color.recording
+        case .error:
+            return DesignTokens.Color.warning
+        default:
+            return DesignTokens.Color.accentSoft
+        }
+    }
+
+    // MARK: - Buttons
+
     private var cancelButton: some View {
-        PillButton(systemImage: "xmark", filled: false, tint: .primary, action: onCancel)
-            .help("Cancel — discard this recording")
-            .disabled(!isRecording)
-            .opacity(isRecording ? 1 : 0.35)
+        HUDCircleButton(
+            systemImage: "xmark",
+            fill: DesignTokens.Color.surfaceSunken,
+            glyphColor: DesignTokens.Color.textSecondary,
+            action: onCancel
+        )
+        .help("Cancel — discard this recording")
+        .disabled(!isRecording)
+        .opacity(isRecording ? 1 : 0.45)
     }
 
     private var confirmButton: some View {
-        PillButton(systemImage: stateGlyph, filled: true, tint: accentColor, action: onConfirm)
-            .help(isRecording ? "Stop and paste" : "Processing…")
-            .disabled(!isRecording)
-            .opacity(isRecording ? 1 : 0.55)
+        HUDCircleButton(
+            systemImage: stateGlyph,
+            fill: accentColor,
+            glyphColor: .white,
+            action: onConfirm
+        )
+        .help(isRecording ? "Stop and paste" : "Processing…")
+        .disabled(!isRecording)
+        .opacity(isRecording ? 1 : 0.55)
     }
 
     private var stateGlyph: String {
@@ -65,28 +123,34 @@ struct HUDView: View {
     }
 }
 
-private struct PillButton: View {
+// MARK: - HUDCircleButton
+
+/// Solid-circle button used for both cancel and confirm. No stroke ring —
+/// the pill itself owns the only border in this composition.
+private struct HUDCircleButton: View {
     let systemImage: String
-    let filled: Bool
-    let tint: Color
+    let fill: Color
+    let glyphColor: Color
     let action: () -> Void
 
-    @State private var hover = false
+    @State private var isHovering = false
 
     var body: some View {
         Button(action: action) {
             Image(systemName: systemImage)
-                .font(.system(size: 13, weight: .bold))
-                .foregroundStyle(filled ? .white : .primary)
-                .frame(width: 36, height: 36)
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(glyphColor)
+                .frame(width: 28, height: 28)
                 .background(
-                    Circle()
-                        .fill(filled ? tint : Color.primary.opacity(hover ? 0.10 : 0.06))
+                    Circle().fill(fill)
                 )
+                .brightness(isHovering ? 0.04 : 0)
+                .scaleEffect(isHovering ? 1.06 : 1.0)
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
-        .onHover { hover = $0 }
+        .onHover { isHovering = $0 }
+        .animation(DesignTokens.Animation.snappy, value: isHovering)
     }
 }
 
@@ -195,7 +259,10 @@ struct Waveform: View {
         return Capsule(style: .continuous)
             .fill(
                 LinearGradient(
-                    colors: [color.opacity(isLive ? 0.95 : 0.40), color.opacity(isLive ? 0.55 : 0.20)],
+                    colors: [
+                        color.opacity(isLive ? 0.95 : 0.35),
+                        color.opacity(isLive ? 0.65 : 0.20)
+                    ],
                     startPoint: .top,
                     endPoint: .bottom
                 )

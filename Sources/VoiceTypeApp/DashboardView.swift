@@ -16,152 +16,196 @@ struct DashboardView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: DesignTokens.Space.lg) {
+            VStack(alignment: .leading, spacing: DesignTokens.Space.xl) {
+                header
                 permissionBanner
                 statusCard
+                if missingKey { setupCard }
                 hotkeyCard
-                if missingKey {
-                    setupCard
-                }
                 recentCard
-                footer
             }
-            .padding(28)
+            .padding(.horizontal, DesignTokens.Space.xxl)
+            .padding(.top, DesignTokens.Space.xl)
+            .padding(.bottom, DesignTokens.Space.xxl)
+            .frame(maxWidth: 880, alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: .center)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(DesignTokens.Color.surface)
         .onReceive(Timer.publish(every: 2, on: .main, in: .common).autoconnect()) { _ in
-            // Re-evaluate permission status periodically so the banner clears
-            // as soon as the user grants access in System Settings.
             permissionTicker &+= 1
         }
     }
+
+    // MARK: - Header
+
+    private var header: some View {
+        HStack(alignment: .center, spacing: DesignTokens.Space.md) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("VoiceType")
+                    .font(DesignTokens.Typography.display)
+                    .vtPrimaryText()
+                Text("Dictation and translation, on your own keys.")
+                    .font(DesignTokens.Typography.body)
+                    .vtSecondaryText()
+            }
+            Spacer()
+            HStack(spacing: 6) {
+                Button("Dictionary", action: openDictionary)
+                Button("Memory", action: openMemory)
+                Button {
+                    openSettings()
+                } label: {
+                    Label("Settings", systemImage: "slider.horizontal.3")
+                }
+            }
+            .controlSize(.regular)
+            .buttonStyle(.bordered)
+        }
+    }
+
+    // MARK: - Permissions
 
     private var micGranted: Bool { Permissions.microphoneStatus() == .granted }
     private var axGranted: Bool { Permissions.accessibilityTrusted }
 
     @ViewBuilder
     private var permissionBanner: some View {
-        let _ = permissionTicker // re-render trigger
+        let _ = permissionTicker
         if !micGranted || !axGranted {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(spacing: 8) {
-                    Image(systemName: "exclamationmark.shield.fill")
-                        .foregroundStyle(.yellow)
-                    Text("Permissions needed").font(.headline)
-                }
-                if !axGranted {
-                    permissionRow(
-                        title: "Accessibility",
-                        body: "Required so the global Right Option hotkey works in any app and so paste can be synthesized.",
-                        action: "Open Accessibility settings",
-                        run: Permissions.openAccessibilitySettings
-                    )
-                }
-                if !micGranted {
-                    HStack(alignment: .top) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Microphone").font(.body.weight(.semibold))
-                            Text("Required to capture your speech. If VoiceType doesn't appear in System Settings → Microphone, click 'Request' below.")
-                                .font(DesignTokens.Font.body)
-                                .foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        Button("Request") {
-                            Task { _ = await Permissions.forceMicrophoneRegistration() }
-                        }
-                        .buttonStyle(.borderedProminent)
-                        Button("Open settings", action: Permissions.openMicrophoneSettings)
-                            .buttonStyle(.bordered)
+            Card(padding: DesignTokens.Space.lg) {
+                VStack(alignment: .leading, spacing: DesignTokens.Space.md) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(DesignTokens.Color.warning)
+                        Text("Finish setup")
+                            .font(DesignTokens.Typography.headline)
+                            .vtPrimaryText()
                     }
+
+                    if !axGranted {
+                        permissionRow(
+                            title: "Accessibility",
+                            body: "Lets the Right Option hotkey work in any app and lets VoiceType paste at your cursor.",
+                            action: "Open Accessibility",
+                            run: Permissions.openAccessibilitySettings
+                        )
+                    }
+                    if !micGranted {
+                        permissionRow(
+                            title: "Microphone",
+                            body: "Captures your speech. If VoiceType doesn't appear in System Settings, click Request below.",
+                            action: "Request",
+                            secondary: ("Open settings", Permissions.openMicrophoneSettings),
+                            primaryStyle: .borderedProminent,
+                            run: { Task { _ = await Permissions.forceMicrophoneRegistration() } }
+                        )
+                    }
+                    Text("After enabling a permission, quit VoiceType (⌘Q) and relaunch — macOS only refreshes Accessibility trust on launch.")
+                        .font(DesignTokens.Typography.caption)
+                        .vtTertiaryText()
                 }
-                Text("After enabling a permission, quit VoiceType (⌘Q) and relaunch — macOS only refreshes Accessibility trust on launch.")
-                    .font(DesignTokens.Font.caption)
-                    .foregroundStyle(.secondary)
             }
-            .padding(18)
-            .background(
-                RoundedRectangle(cornerRadius: DesignTokens.Radius.md)
-                    .fill(Color.yellow.opacity(0.12))
-            )
             .overlay(
-                RoundedRectangle(cornerRadius: DesignTokens.Radius.md)
-                    .stroke(Color.yellow.opacity(0.5), lineWidth: 1)
+                RoundedRectangle(cornerRadius: DesignTokens.Radius.md, style: .continuous)
+                    .strokeBorder(DesignTokens.Color.warning.opacity(0.45), lineWidth: 1)
             )
         }
     }
 
-    private func permissionRow(title: String, body: String, action: String, run: @escaping () -> Void) -> some View {
-        HStack(alignment: .top) {
+    private func permissionRow(
+        title: String,
+        body: String,
+        action: String,
+        secondary: (String, () -> Void)? = nil,
+        primaryStyle: PermissionButtonStyle = .bordered,
+        run: @escaping () -> Void
+    ) -> some View {
+        HStack(alignment: .center, spacing: DesignTokens.Space.md) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.body.weight(.semibold))
-                Text(body).font(DesignTokens.Font.body).foregroundStyle(.secondary)
+                Text(title).font(DesignTokens.Typography.bodyEmphasis).vtPrimaryText()
+                Text(body).font(DesignTokens.Typography.body).vtSecondaryText()
             }
-            Spacer()
-            Button(action) { run() }
-                .buttonStyle(.bordered)
+            Spacer(minLength: 0)
+            Group {
+                switch primaryStyle {
+                case .borderedProminent:
+                    Button(action, action: run).buttonStyle(.borderedProminent).tint(DesignTokens.Color.accent)
+                case .bordered:
+                    Button(action, action: run).buttonStyle(.bordered)
+                }
+            }
+            if let secondary {
+                Button(secondary.0, action: secondary.1).buttonStyle(.bordered)
+            }
         }
     }
+
+    private enum PermissionButtonStyle { case bordered, borderedProminent }
 
     // MARK: - Status
 
     private var statusCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .center, spacing: 16) {
-                statusIndicator
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(statusTitle)
-                        .font(.system(size: 24, weight: .semibold, design: .rounded))
-                    Text(statusSubtitle)
-                        .foregroundStyle(.secondary)
+        Card(padding: DesignTokens.Space.xl) {
+            VStack(alignment: .leading, spacing: DesignTokens.Space.lg) {
+                HStack(alignment: .center, spacing: DesignTokens.Space.lg) {
+                    statusIndicator
+                    VStack(alignment: .leading, spacing: DesignTokens.Space.xs) {
+                        Text(statusTitle)
+                            .font(DesignTokens.Typography.title)
+                            .vtPrimaryText()
+                        Text(statusSubtitle)
+                            .font(DesignTokens.Typography.body)
+                            .vtSecondaryText()
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer(minLength: DesignTokens.Space.md)
+                    actionButtons
                 }
-                Spacer()
                 if engineIsRecording {
-                    Button(role: .destructive) {
-                        Task { await engine.cancelRecording() }
-                    } label: {
-                        Label("Cancel", systemImage: "xmark")
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.large)
-                    Button(action: toggleTranscribe) {
-                        Label("Stop & paste", systemImage: "checkmark")
-                            .padding(.horizontal, 6)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.large)
-                    .keyboardShortcut(.return, modifiers: [])
-                } else {
-                    Button(action: toggleTranscribe) {
-                        Label(engineIsActive ? "Working…" : "Start dictation",
-                              systemImage: engineIsActive ? "ellipsis" : "mic.fill")
-                            .padding(.horizontal, 6)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.large)
-                    .keyboardShortcut(.return, modifiers: [])
-                    .disabled(engineIsActive)
+                    Waveform(recorder: engine.recorder, color: indicatorColor, isLive: true)
+                        .frame(height: 36)
                 }
-            }
-            if engineIsRecording {
-                Waveform(recorder: engine.recorder, color: indicatorColor, isLive: true)
-                    .frame(height: 30)
             }
         }
-        .padding(20)
-        .background(
-            RoundedRectangle(cornerRadius: DesignTokens.Radius.lg)
-                .fill(.ultraThinMaterial)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: DesignTokens.Radius.lg)
-                .stroke(DesignTokens.Color.border)
-        )
     }
 
-    private var engineIsRecording: Bool {
-        if case .recording = engine.state { return true }
-        return false
+    @ViewBuilder
+    private var actionButtons: some View {
+        if engineIsRecording {
+            HStack(spacing: DesignTokens.Space.sm) {
+                Button(role: .destructive) {
+                    Task { await engine.cancelRecording() }
+                } label: {
+                    Label("Cancel", systemImage: "xmark")
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.large)
+                Button {
+                    Task { await engine.toggleRecording(mode: .transcribe) }
+                } label: {
+                    Label("Stop & paste", systemImage: "checkmark")
+                        .padding(.horizontal, 6)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(DesignTokens.Color.accent)
+                .controlSize(.large)
+                .keyboardShortcut(.return, modifiers: [])
+            }
+        } else {
+            Button {
+                Task { await engine.toggleRecording(mode: .transcribe) }
+            } label: {
+                Label(engineIsActive ? "Working…" : "Start dictation",
+                      systemImage: engineIsActive ? "ellipsis" : "mic.fill")
+                    .padding(.horizontal, 6)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(DesignTokens.Color.accent)
+            .controlSize(.large)
+            .keyboardShortcut(.return, modifiers: [])
+            .disabled(engineIsActive)
+        }
     }
 
     private var engineIsActive: Bool {
@@ -171,14 +215,19 @@ struct DashboardView: View {
         }
     }
 
+    private var engineIsRecording: Bool {
+        if case .recording = engine.state { return true }
+        return false
+    }
+
     private var statusIndicator: some View {
         ZStack {
             Circle()
-                .fill(indicatorColor.opacity(0.18))
-                .frame(width: 64, height: 64)
+                .fill(indicatorColor.opacity(0.16))
+                .frame(width: 56, height: 56)
             Circle()
                 .fill(indicatorColor)
-                .frame(width: 24, height: 24)
+                .frame(width: 16, height: 16)
         }
     }
 
@@ -186,16 +235,16 @@ struct DashboardView: View {
         switch engine.state {
         case .recording(.transcribe), .processing(.transcribe, _): return DesignTokens.Color.recording
         case .recording(.translate), .processing(.translate, _): return DesignTokens.Color.translate
-        case .error: return .yellow
-        default: return .secondary
+        case .error: return DesignTokens.Color.warning
+        default: return DesignTokens.Color.textTertiary
         }
     }
 
     private var statusTitle: String {
         switch engine.state {
         case .idle: return "Ready"
-        case .recording(.transcribe): return "Listening…"
-        case .recording(.translate): return "Listening (translate)…"
+        case .recording(.transcribe): return "Listening"
+        case .recording(.translate): return "Listening · Translate"
         case .processing(_, let stage): return stage
         case .error: return "Error"
         }
@@ -206,9 +255,9 @@ struct DashboardView: View {
         case .idle:
             return "Tap Right Option to start dictation. Tap again to stop and paste."
         case .recording(.transcribe):
-            return "Tap Right Option again to stop. The cleaned transcript will paste at your cursor."
+            return "Tap Right Option again — or press Return — to stop and paste."
         case .recording(.translate):
-            return "Translating from \(store.settings.translateSourceLanguage) → \(store.settings.translateTargetLanguage). Tap Right Option to stop."
+            return "Translating \(store.settings.translateSourceLanguage) → \(store.settings.translateTargetLanguage). Tap Right Option to stop."
         case .processing:
             return "Working through the pipeline — hang tight."
         case .error(let msg):
@@ -216,36 +265,34 @@ struct DashboardView: View {
         }
     }
 
-    private func toggleTranscribe() {
-        Task { await engine.toggleRecording(mode: .transcribe) }
-    }
-
-    // MARK: - Hotkey card
+    // MARK: - Hotkeys
 
     private var hotkeyCard: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Hotkeys").font(.headline)
-            HotkeyRow(
-                title: "Dictate",
-                keys: ["Right Option"],
-                description: "Tap once to start, tap again to stop and paste.",
-                tint: DesignTokens.Color.recording
-            )
-            HotkeyRow(
-                title: "Translate",
-                keys: ["Right Option", "Right Shift"],
-                description: "Hold Right Shift while tapping Right Option to start a translation. Tap Right Option again to stop.",
-                tint: DesignTokens.Color.translate
-            )
-            Text("Right Option held continuously (longer than 0.5 s) still works for accent input — Option+E for é, etc.")
-                .font(DesignTokens.Font.caption)
-                .foregroundStyle(.secondary)
+        Card {
+            VStack(alignment: .leading, spacing: DesignTokens.Space.md) {
+                SectionTitle("Hotkeys")
+                VStack(spacing: DesignTokens.Space.md) {
+                    HotkeyRow(
+                        title: "Dictate",
+                        keys: ["Right Option"],
+                        description: "Tap once to start, tap again to stop and paste.",
+                        tint: DesignTokens.Color.recording
+                    )
+                    HotkeyRow(
+                        title: "Translate",
+                        keys: ["Right Option", "Right Shift"],
+                        description: "Hold Right Shift while tapping Right Option to start translation. Tap Right Option again to stop.",
+                        tint: DesignTokens.Color.translate
+                    )
+                }
+                Text("Right Option held continuously (longer than 0.5 s) still works for accent input — Option+E for é, etc.")
+                    .font(DesignTokens.Typography.caption)
+                    .vtTertiaryText()
+            }
         }
-        .padding(20)
-        .background(card)
     }
 
-    // MARK: - Setup card (shown when no Groq key yet)
+    // MARK: - Setup card
 
     private var missingKey: Bool {
         store.settings.credentials.groqAPIKey.isEmpty &&
@@ -256,83 +303,76 @@ struct DashboardView: View {
     }
 
     private var setupCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Label("Add an API key to start dictating", systemImage: "key.fill")
-                .font(.headline)
-            Text("VoiceType uses your own API keys. The fastest free path is Groq — one key powers both the Whisper transcription and the LLM editor. Grab a key from console.groq.com/keys, then paste it in Settings → Providers.")
-                .foregroundStyle(.secondary)
-            HStack {
-                Button("Open Providers") { openProviders() }
-                    .buttonStyle(.borderedProminent)
-                Button("Use Apple Speech instead") {
-                    store.update { $0.sttProvider = .appleSpeech }
-                    store.update { $0.llmProvider = .disabled }
+        Card {
+            VStack(alignment: .leading, spacing: DesignTokens.Space.md) {
+                HStack(spacing: 8) {
+                    Image(systemName: "key.fill")
+                        .foregroundStyle(DesignTokens.Color.accent)
+                    Text("Add an API key to start dictating")
+                        .font(DesignTokens.Typography.headline)
+                        .vtPrimaryText()
                 }
-                .buttonStyle(.bordered)
+                Text("VoiceType runs on your own API keys. The cheapest fast path is Groq — one key powers both the Whisper transcription and the LLM editor.")
+                    .font(DesignTokens.Typography.body)
+                    .vtSecondaryText()
+                HStack(spacing: DesignTokens.Space.sm) {
+                    Button("Open Providers", action: openProviders)
+                        .buttonStyle(.borderedProminent)
+                        .tint(DesignTokens.Color.accent)
+                    Button("Use Apple Speech instead") {
+                        store.update { $0.sttProvider = .appleSpeech }
+                        store.update { $0.llmProvider = .disabled }
+                    }
+                    .buttonStyle(.bordered)
+                }
             }
         }
-        .padding(20)
-        .background(card.opacity(0.9))
         .overlay(
-            RoundedRectangle(cornerRadius: DesignTokens.Radius.md)
-                .stroke(DesignTokens.Color.accent, lineWidth: 1.5)
+            RoundedRectangle(cornerRadius: DesignTokens.Radius.md, style: .continuous)
+                .strokeBorder(DesignTokens.Color.accent.opacity(0.55), lineWidth: 1)
         )
     }
 
-    // MARK: - Recent activity
+    // MARK: - Recent
 
     private var recentCard: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text("Recent dictations").font(.headline)
-                Spacer()
-                if !history.entries.isEmpty {
-                    Button("Clear", role: .destructive) { history.clear() }
-                        .buttonStyle(.borderless)
-                }
-            }
-            if history.entries.isEmpty {
-                Text("Your last few dictations will show up here. Right now there's nothing yet — try a quick test once your key is in.")
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, minHeight: 120)
-                    .padding()
-                    .background(
-                        RoundedRectangle(cornerRadius: DesignTokens.Radius.md)
-                            .fill(DesignTokens.Color.surfaceElevated)
+        Card {
+            VStack(alignment: .leading, spacing: DesignTokens.Space.md) {
+                SectionTitle(
+                    "Recent dictations",
+                    trailing: history.entries.isEmpty
+                        ? nil
+                        : AnyView(
+                            Button("Clear", role: .destructive) { history.clear() }
+                                .buttonStyle(.borderless)
+                                .font(DesignTokens.Typography.captionEmphasis)
+                          )
+                )
+                if history.entries.isEmpty {
+                    EmptyState(
+                        icon: "waveform.path",
+                        title: "Nothing yet",
+                        message: "Your last dictations will appear here once you've spoken into the meter."
                     )
-            } else {
-                VStack(spacing: 6) {
-                    ForEach(history.entries.prefix(8)) { entry in
-                        HistoryRow(entry: entry)
+                } else {
+                    VStack(spacing: DesignTokens.Space.sm) {
+                        ForEach(history.entries.prefix(8)) { entry in
+                            HistoryRow(entry: entry)
+                        }
                     }
                 }
+                HStack {
+                    Text("Total dictations: \(memory.snapshot.totalDictations)")
+                        .font(DesignTokens.Typography.caption)
+                        .vtTertiaryText()
+                    Spacer()
+                }
             }
         }
-        .padding(20)
-        .background(card)
-    }
-
-    private var footer: some View {
-        HStack(spacing: 12) {
-            Button("Settings") { openSettings() }
-            Button("Dictionary") { openDictionary() }
-            Button("Memory") { openMemory() }
-            Spacer()
-            Text("\(memory.snapshot.totalDictations) total dictations")
-                .font(DesignTokens.Font.caption)
-                .foregroundStyle(.secondary)
-        }
-    }
-
-    private var card: some View {
-        RoundedRectangle(cornerRadius: DesignTokens.Radius.md)
-            .fill(DesignTokens.Color.surfaceElevated)
-            .overlay(
-                RoundedRectangle(cornerRadius: DesignTokens.Radius.md)
-                    .stroke(DesignTokens.Color.border)
-            )
     }
 }
+
+// MARK: - Subcomponents
 
 private struct HotkeyRow: View {
     let title: String
@@ -341,25 +381,33 @@ private struct HotkeyRow: View {
     let tint: Color
 
     var body: some View {
-        HStack(alignment: .top, spacing: 14) {
-            Circle().fill(tint).frame(width: 8, height: 8).padding(.top, 6)
+        HStack(alignment: .top, spacing: DesignTokens.Space.md) {
+            Circle().fill(tint).frame(width: 8, height: 8).padding(.top, 7)
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
-                    Text(title).font(.body.weight(.semibold))
+                    Text(title)
+                        .font(DesignTokens.Typography.bodyEmphasis)
+                        .vtPrimaryText()
                     ForEach(keys, id: \.self) { k in
                         Text(k)
-                            .font(DesignTokens.Font.mono)
-                            .padding(.horizontal, 8).padding(.vertical, 2)
+                            .font(DesignTokens.Typography.mono)
+                            .vtPrimaryText()
+                            .padding(.horizontal, 8).padding(.vertical, 3)
                             .background(
-                                RoundedRectangle(cornerRadius: 6).fill(DesignTokens.Color.surface)
+                                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                    .fill(DesignTokens.Color.surfaceSunken)
                             )
-                            .overlay(RoundedRectangle(cornerRadius: 6).stroke(DesignTokens.Color.border))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                    .stroke(DesignTokens.Color.borderSubtle, lineWidth: 0.5)
+                            )
                     }
                 }
                 Text(description)
-                    .foregroundStyle(.secondary)
-                    .font(DesignTokens.Font.body)
+                    .font(DesignTokens.Typography.body)
+                    .vtSecondaryText()
             }
+            Spacer(minLength: 0)
         }
     }
 }
@@ -374,25 +422,19 @@ private struct HistoryRow: View {
     }()
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
+        HStack(alignment: .top, spacing: DesignTokens.Space.md) {
+            VStack(alignment: .leading, spacing: DesignTokens.Space.xs) {
                 HStack(spacing: 6) {
-                    Text(entry.mode == "translate" ? "Translate" : "Dictate")
-                        .font(DesignTokens.Font.caption)
-                        .padding(.horizontal, 6).padding(.vertical, 2)
-                        .background(
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(entry.mode == "translate" ? DesignTokens.Color.translate.opacity(0.18) : DesignTokens.Color.recording.opacity(0.18))
-                        )
-                        .foregroundStyle(.secondary)
+                    badge
                     Text(Self.formatter.string(from: entry.date))
-                        .font(DesignTokens.Font.caption)
-                        .foregroundStyle(.tertiary)
+                        .font(DesignTokens.Typography.caption)
+                        .vtTertiaryText()
                 }
                 Text(entry.text)
-                    .font(DesignTokens.Font.body)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .font(DesignTokens.Typography.body)
+                    .vtPrimaryText()
                     .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
             Spacer(minLength: 0)
             Button {
@@ -401,16 +443,56 @@ private struct HistoryRow: View {
                 pb.setString(entry.text, forType: .string)
             } label: {
                 Image(systemName: "doc.on.doc")
+                    .font(.system(size: 13, weight: .regular))
+                    .vtTertiaryText()
             }
             .buttonStyle(.borderless)
             .help("Copy to clipboard")
         }
-        .padding(12)
+        .padding(DesignTokens.Space.md)
         .background(
-            RoundedRectangle(cornerRadius: 10).fill(DesignTokens.Color.surface)
+            RoundedRectangle(cornerRadius: DesignTokens.Radius.sm, style: .continuous)
+                .fill(DesignTokens.Color.surfaceSunken)
         )
-        .overlay(
-            RoundedRectangle(cornerRadius: 10).stroke(DesignTokens.Color.border)
+    }
+
+    private var badge: some View {
+        let isTranslate = entry.mode == "translate"
+        let tint = isTranslate ? DesignTokens.Color.translate : DesignTokens.Color.accent
+        let label = isTranslate ? "Translate" : "Dictate"
+        return Text(label)
+            .font(DesignTokens.Typography.captionEmphasis)
+            .foregroundStyle(tint)
+            .padding(.horizontal, 7).padding(.vertical, 2)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(tint.opacity(0.10))
+            )
+    }
+}
+
+private struct EmptyState: View {
+    let icon: String
+    let title: String
+    let message: String
+    var body: some View {
+        VStack(spacing: DesignTokens.Space.sm) {
+            Image(systemName: icon)
+                .font(.system(size: 24, weight: .light))
+                .vtTertiaryText()
+            Text(title)
+                .font(DesignTokens.Typography.bodyEmphasis)
+                .vtSecondaryText()
+            Text(message)
+                .font(DesignTokens.Typography.caption)
+                .vtTertiaryText()
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity, minHeight: 120)
+        .padding(.vertical, DesignTokens.Space.md)
+        .background(
+            RoundedRectangle(cornerRadius: DesignTokens.Radius.md, style: .continuous)
+                .fill(DesignTokens.Color.surfaceSunken)
         )
     }
 }

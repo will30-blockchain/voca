@@ -8,52 +8,113 @@ struct DictionarySettingsView: View {
     @State private var selection = Set<UUID>()
 
     var body: some View {
-        VStack(alignment: .leading, spacing: DesignTokens.Space.md) {
-            Text("Dictionary").font(.title2.bold())
-            Text("Add names, acronyms, and jargon you say often. VoiceType passes these to the transcription model and the LLM editor so spelling stays consistent.")
-                .foregroundStyle(.secondary)
+        SettingsPage(
+            title: "Dictionary",
+            subtitle: "Names, acronyms, and jargon you say often. VoiceType passes these to both the transcription model and the LLM editor so spelling stays consistent."
+        ) {
+            addEntryCard
+            entriesCard
+        }
+    }
 
-            HStack {
-                TextField("Term (e.g. Will, Anthropic, MLX)", text: $newTerm)
-                    .textFieldStyle(.roundedBorder)
-                    .onSubmit(submit)
-                TextField("Note (optional)", text: $newNote)
-                    .textFieldStyle(.roundedBorder)
-                Button("Add", action: submit).disabled(newTerm.trimmingCharacters(in: .whitespaces).isEmpty)
+    // MARK: - Cards
+
+    private var addEntryCard: some View {
+        Card {
+            VStack(alignment: .leading, spacing: DesignTokens.Space.md) {
+                SectionTitle("Add a term")
+                HStack(alignment: .top, spacing: DesignTokens.Space.sm) {
+                    VStack(alignment: .leading, spacing: DesignTokens.Space.xs) {
+                        Text("Term")
+                            .font(DesignTokens.Typography.bodyEmphasis)
+                            .vtPrimaryText()
+                        TextField("e.g. Anthropic, MLX, Will", text: $newTerm)
+                            .textFieldStyle(.roundedBorder)
+                            .font(DesignTokens.Typography.body)
+                            .onSubmit(submit)
+                    }
+                    VStack(alignment: .leading, spacing: DesignTokens.Space.xs) {
+                        Text("Note")
+                            .font(DesignTokens.Typography.bodyEmphasis)
+                            .vtPrimaryText()
+                        TextField("Optional context", text: $newNote)
+                            .textFieldStyle(.roundedBorder)
+                            .font(DesignTokens.Typography.body)
+                            .onSubmit(submit)
+                    }
+                    VStack(alignment: .leading, spacing: DesignTokens.Space.xs) {
+                        Text(" ")
+                            .font(DesignTokens.Typography.bodyEmphasis)
+                        Button("Add", action: submit)
+                            .buttonStyle(.borderedProminent)
+                            .tint(DesignTokens.Color.accent)
+                            .disabled(newTerm.trimmingCharacters(in: .whitespaces).isEmpty)
+                    }
+                }
             }
+        }
+    }
 
-            Table(dictionary.entries, selection: $selection) {
-                TableColumn("Term") { e in
-                    TextField("", text: Binding(
-                        get: { e.term },
-                        set: { newValue in
-                            var updated = e; updated.term = newValue; dictionary.update(updated)
-                        }
-                    ))
-                }
-                TableColumn("Note") { e in
-                    TextField("", text: Binding(
-                        get: { e.note },
-                        set: { newValue in
-                            var updated = e; updated.note = newValue; dictionary.update(updated)
-                        }
-                    ))
-                }
-            }
-            .frame(minHeight: 220)
+    private var entriesCard: some View {
+        Card {
+            VStack(alignment: .leading, spacing: DesignTokens.Space.md) {
+                SectionTitle(
+                    "Entries",
+                    trailing: AnyView(
+                        Text("\(dictionary.entries.count)")
+                            .font(DesignTokens.Typography.captionEmphasis)
+                            .vtTertiaryText()
+                    )
+                )
 
-            HStack {
-                Button(role: .destructive) {
-                    dictionary.remove(ids: selection)
-                    selection.removeAll()
-                } label: {
-                    Label("Remove selected", systemImage: "trash")
+                Table(dictionary.entries, selection: $selection) {
+                    TableColumn("Term") { entry in
+                        TextField("", text: Binding(
+                            get: { entry.term },
+                            set: { newValue in
+                                var updated = entry
+                                updated.term = newValue
+                                dictionary.update(updated)
+                            }
+                        ))
+                        .textFieldStyle(.plain)
+                        .font(DesignTokens.Typography.body)
+                    }
+                    TableColumn("Note") { entry in
+                        TextField("", text: Binding(
+                            get: { entry.note },
+                            set: { newValue in
+                                var updated = entry
+                                updated.note = newValue
+                                dictionary.update(updated)
+                            }
+                        ))
+                        .textFieldStyle(.plain)
+                        .font(DesignTokens.Typography.body)
+                        .vtSecondaryText()
+                    }
                 }
-                .disabled(selection.isEmpty)
-                Spacer()
-                Text("\(dictionary.entries.count) entries")
-                    .font(DesignTokens.Font.caption)
-                    .foregroundStyle(.secondary)
+                .frame(minHeight: 240)
+                .background(
+                    RoundedRectangle(cornerRadius: DesignTokens.Radius.sm, style: .continuous)
+                        .fill(DesignTokens.Color.surfaceSunken)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: DesignTokens.Radius.sm, style: .continuous)
+                        .stroke(DesignTokens.Color.borderSubtle, lineWidth: 0.5)
+                )
+
+                HStack {
+                    Button(role: .destructive) {
+                        dictionary.remove(ids: selection)
+                        selection.removeAll()
+                    } label: {
+                        Label("Remove selected", systemImage: "trash")
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(selection.isEmpty)
+                    Spacer()
+                }
             }
         }
     }
