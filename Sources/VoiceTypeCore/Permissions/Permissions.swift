@@ -19,11 +19,32 @@ public enum Permissions {
     }
 
     public static func requestMicrophone() async -> Bool {
-        await withCheckedContinuation { cont in
+        let granted = await withCheckedContinuation { (cont: CheckedContinuation<Bool, Never>) in
             AVCaptureDevice.requestAccess(for: .audio) { granted in
                 cont.resume(returning: granted)
             }
         }
+        AppLog.app.info("Microphone request returned granted=\(granted, privacy: .public)")
+        return granted
+    }
+
+    /// Actually opens a tiny capture session so macOS *registers* VoiceType in
+    /// the Microphone privacy list, even if the user dismisses the prompt.
+    /// `requestAccess` alone sometimes doesn't surface the app in System
+    /// Settings on ad-hoc signed builds.
+    public static func forceMicrophoneRegistration() async -> MicStatus {
+        _ = await requestMicrophone()
+        let session = AVCaptureSession()
+        if let device = AVCaptureDevice.default(for: .audio),
+           let input = try? AVCaptureDeviceInput(device: device),
+           session.canAddInput(input) {
+            session.addInput(input)
+            session.startRunning()
+            try? await Task.sleep(nanoseconds: 200_000_000)
+            session.stopRunning()
+            session.removeInput(input)
+        }
+        return microphoneStatus()
     }
 
     public static var accessibilityTrusted: Bool {

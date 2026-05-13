@@ -26,8 +26,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         AppLog.app.info("VoiceType launched.")
 
         // Request mic + accessibility ASAP so the user only sees the system
-        // prompts once, not on the first dictation press.
-        Task { _ = await Permissions.requestMicrophone() }
+        // prompts once, not on the first dictation press. forceMicrophone…
+        // opens a tiny capture session so VoiceType actually appears in
+        // System Settings → Microphone (the request-only API can be missed
+        // by TCC on ad-hoc / dev-signed builds).
+        Task { _ = await Permissions.forceMicrophoneRegistration() }
         _ = Permissions.requestAccessibility(prompt: true)
 
         menuBar = MenuBarController(

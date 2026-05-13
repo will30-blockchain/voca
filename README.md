@@ -28,9 +28,36 @@ transcription model — Groq Whisper-large is the recommended default.
 ```bash
 git clone <this repo>
 cd VoiceType
-./scripts/build-app.sh
+./scripts/setup-signing.sh   # one-time: create a stable code-signing cert
+./scripts/build-app.sh       # build + sign the .app
 open dist/VoiceType.app
 ```
+
+> The first `codesign` call may ask for your login password — click
+> **Always Allow** so future builds don't prompt.
+
+## Troubleshooting permissions
+
+macOS remembers Microphone and Accessibility grants by the app's code
+signature. If you rebuild with a different signature, macOS treats it as
+a brand-new app and forgets the grants.
+
+`scripts/setup-signing.sh` creates a stable self-signed certificate
+("VoiceType Dev") so every subsequent build keeps the same signing
+identity. Run it once. Always build via `scripts/build-app.sh`.
+
+**If permissions still get lost or VoiceType doesn't appear in
+System Settings → Microphone:**
+
+```bash
+./scripts/reset-permissions.sh
+open dist/VoiceType.app
+```
+
+That wipes the orphaned TCC entries and forces macOS to re-prompt.
+After granting both Microphone *and* Accessibility, **quit VoiceType
+(⌘Q) and relaunch** — Accessibility trust is only refreshed at
+process start.
 
 On first launch:
 1. Grant **Microphone** access when prompted.

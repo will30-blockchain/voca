@@ -1,6 +1,7 @@
 #!/bin/bash
 # Build VoiceType.app — a proper macOS bundle with Info.plist for
-# microphone + accessibility permissions and an ad-hoc code signature.
+# microphone + accessibility permissions, signed with a stable self-signed
+# identity so macOS TCC remembers permissions across rebuilds.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -10,6 +11,13 @@ APP_NAME="VoiceType"
 BUNDLE_ID="com.voicetype.app"
 DIST_DIR="dist"
 APP_DIR="${DIST_DIR}/${APP_NAME}.app"
+CERT_CN="VoiceType Dev"
+
+# Ensure a stable signing identity exists.
+if ! security find-identity -p codesigning -v 2>/dev/null | grep -qF "\"${CERT_CN}\""; then
+    echo "▸ Stable signing identity '${CERT_CN}' missing — running setup-signing.sh"
+    "$(dirname "$0")/setup-signing.sh"
+fi
 
 echo "▸ swift build --configuration ${CONFIG}"
 swift build --configuration "${CONFIG}"
@@ -55,8 +63,6 @@ cat > "${APP_DIR}/Contents/Info.plist" <<PLIST
     <string>1</string>
     <key>LSMinimumSystemVersion</key>
     <string>14.0</string>
-    <key>LSUIElement</key>
-    <true/>
     <key>NSHighResolutionCapable</key>
     <true/>
     <key>NSPrincipalClass</key>
@@ -71,8 +77,10 @@ cat > "${APP_DIR}/Contents/Info.plist" <<PLIST
 </plist>
 PLIST
 
-# Ad-hoc sign so TCC, mic, and accessibility prompts can identify the bundle.
-echo "▸ Signing (ad-hoc)"
-codesign --force --deep --sign - --options runtime "${APP_DIR}" >/dev/null
+echo "▸ Signing with '${CERT_CN}'"
+codesign --force --deep --sign "${CERT_CN}" --options runtime "${APP_DIR}" >/dev/null
 
+echo
 echo "✅ ${APP_DIR}"
+echo
+codesign -dvv "${APP_DIR}" 2>&1 | grep -E "Authority|Identifier|TeamIdentifier|Signature" | sed 's/^/    /'

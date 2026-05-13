@@ -59,12 +59,21 @@ struct DashboardView: View {
                     )
                 }
                 if !micGranted {
-                    permissionRow(
-                        title: "Microphone",
-                        body: "Required to capture your speech.",
-                        action: "Open Microphone settings",
-                        run: Permissions.openMicrophoneSettings
-                    )
+                    HStack(alignment: .top) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Microphone").font(.body.weight(.semibold))
+                            Text("Required to capture your speech. If VoiceType doesn't appear in System Settings → Microphone, click 'Request' below.")
+                                .font(DesignTokens.Font.body)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Button("Request") {
+                            Task { _ = await Permissions.forceMicrophoneRegistration() }
+                        }
+                        .buttonStyle(.borderedProminent)
+                        Button("Open settings", action: Permissions.openMicrophoneSettings)
+                            .buttonStyle(.bordered)
+                    }
                 }
                 Text("After enabling a permission, quit VoiceType (⌘Q) and relaunch — macOS only refreshes Accessibility trust on launch.")
                     .font(DesignTokens.Font.caption)
