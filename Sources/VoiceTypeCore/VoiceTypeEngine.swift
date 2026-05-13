@@ -34,7 +34,7 @@ public final class VoiceTypeEngine: ObservableObject {
         recorder: AudioRecorder,
         injector: TextInjector,
         log: LogStore,
-        urlSession: URLSession = .shared
+        urlSession: URLSession? = nil
     ) {
         self.settingsStore = settingsStore
         self.memory = memory
@@ -42,7 +42,18 @@ public final class VoiceTypeEngine: ObservableObject {
         self.recorder = recorder
         self.injector = injector
         self.log = log
-        self.urlSession = urlSession
+        // Dedicated session so transient retries don't fight the
+        // shared session's connection pool, and per-request timeout is
+        // generous enough for a slow Whisper upload.
+        if let urlSession {
+            self.urlSession = urlSession
+        } else {
+            let config = URLSessionConfiguration.default
+            config.timeoutIntervalForRequest = 30
+            config.timeoutIntervalForResource = 60
+            config.waitsForConnectivity = true
+            self.urlSession = URLSession(configuration: config)
+        }
         self.history = TranscriptHistory()
     }
 
@@ -194,7 +205,9 @@ public final class VoiceTypeEngine: ObservableObject {
             language: s.primaryLanguage,
             prompt: prompt
         )
-        return try await provider.transcribe(req, model: s.sttModel)
+        return try await withTransientRetry(category: .stt, label: "transcribe") {
+            try await provider.transcribe(req, model: s.sttModel)
+        }
     }
 
     private func refine(raw: STTResult, mode: DictationMode) async throws -> String {
@@ -236,8 +249,66 @@ public final class VoiceTypeEngine: ObservableObject {
             maxTokens: 1024
         )
 
-        let result = try await provider.complete(req, model: s.llmModel)
+        let result = try await withTransientRetry(category: .llm, label: mode == .translate ? "translate" : "refine") {
+            try await provider.complete(req, model: s.llmModel)
+        }
         return result.text.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    // MARK: - Retry
+
+    /// Retries the operation on transient URLSession failures (connection
+    /// dropped, host unreachable, DNS, timeout). These are normal blips on
+    /// macOS — Wi-Fi roams, NAT entries expire, the server closes a
+    /// keep-alive connection just before we reuse it. A single failure
+    /// shouldn't surface as a user-visible error.
+    private func withTransientRetry<T: Sendable>(
+        category: LogStore.Category,
+        label: String,
+        maxAttempts: Int = 3,
+        operation: () async throws -> T
+    ) async throws -> T {
+        var lastError: Error?
+        for attempt in 1...maxAttempts {
+            do {
+                return try await operation()
+            } catch {
+                lastError = error
+                let code = (error as? URLError)?.code
+                let transient = code.map(Self.isTransient) ?? false
+                if !transient || attempt == maxAttempts {
+                    throw error
+                }
+                let delay = 0.4 * Double(attempt)
+                log.warning(category, "Transient network error — retrying \(label)",
+                            detail: [
+                                "attempt": "\(attempt)/\(maxAttempts)",
+                                "error": error.localizedDescription,
+                                "next_delay_s": String(format: "%.2f", delay)
+                            ])
+                try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+            }
+        }
+        throw lastError ?? URLError(.unknown)
+    }
+
+    private static func isTransient(_ code: URLError.Code) -> Bool {
+        switch code {
+        case .networkConnectionLost,
+             .timedOut,
+             .cannotConnectToHost,
+             .cannotFindHost,
+             .notConnectedToInternet,
+             .dnsLookupFailed,
+             .resourceUnavailable,
+             .internationalRoamingOff,
+             .callIsActive,
+             .dataNotAllowed,
+             .secureConnectionFailed:
+            return true
+        default:
+            return false
+        }
     }
 }
 
