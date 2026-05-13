@@ -22,11 +22,7 @@ struct HUDView: View {
         .background(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .fill(.ultraThinMaterial)
-                .shadow(color: .black.opacity(0.30), radius: 18, x: 0, y: 8)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .strokeBorder(.white.opacity(0.10), lineWidth: 0.5)
+                .shadow(color: .black.opacity(0.32), radius: 18, x: 0, y: 8)
         )
         .padding(8)
     }
@@ -189,10 +185,13 @@ struct Waveform: View {
             let offset = h.count - total + i
             raw = offset >= 0 && offset < h.count ? h[offset] : 0
         }
+        // sqrt amplifies small signals — speech registers visibly even when RMS
+        // is ~0.1, which is what makes the meter look "alive".
+        let amp = sqrt(max(0, min(1, raw)))
         // Bell-curve falloff at the edges so the cluster looks meter-shaped.
         let t = Double(i) / Double(max(1, total - 1))
         let edge = CGFloat(1 - pow(2 * t - 1, 2) * 0.35)
-        let h2 = max(minHeight, CGFloat(raw) * height * edge)
+        let h2 = max(minHeight, CGFloat(amp) * height * edge)
         return Capsule(style: .continuous)
             .fill(
                 LinearGradient(

@@ -99,8 +99,10 @@ public final class AudioRecorder: ObservableObject {
             sink.append(pointer: channelData[0], count: count)
 
             // RMS for live meter. Compute on the audio thread to avoid hops.
+            // Typical speech RMS in 16-bit is ~300–2500; quiet rooms ~50–150.
+            // Scale so normal speech reaches the upper half of the bar.
             let rms = Self.rms(samples: channelData[0], count: count)
-            let normalised = min(1, rms / 8_000) // 16-bit signal; ~8k is "normal speech"
+            let normalised = min(1, rms / 2_500)
             Task { @MainActor [weak self] in
                 self?.level = normalised
             }

@@ -17,10 +17,32 @@ public enum STTProviderID: String, Codable, CaseIterable, Sendable {
 
     public var defaultModel: String {
         switch self {
-        case .groqWhisper: return "whisper-large-v3-turbo"
-        case .openaiWhisper: return "whisper-1"
-        case .deepgram: return "nova-2"
+        case .groqWhisper: return "whisper-large-v3"
+        case .openaiWhisper: return "gpt-4o-transcribe"
+        case .deepgram: return "nova-3"
         case .appleSpeech: return "system"
+        }
+    }
+
+    /// Known-good model presets shown in the Providers picker. The user can
+    /// still type a custom model name in the text field if they want
+    /// something not on this list.
+    public var knownModels: [(id: String, label: String)] {
+        switch self {
+        case .groqWhisper: return [
+            ("whisper-large-v3", "Whisper Large v3 — best accuracy, still fast on Groq"),
+            ("whisper-large-v3-turbo", "Whisper Large v3 Turbo — faster, slightly less accurate")
+        ]
+        case .openaiWhisper: return [
+            ("gpt-4o-transcribe", "GPT-4o Transcribe — most accurate (recommended)"),
+            ("gpt-4o-mini-transcribe", "GPT-4o Mini Transcribe — cheaper, almost as good"),
+            ("whisper-1", "Whisper v2 — legacy, cheaper")
+        ]
+        case .deepgram: return [
+            ("nova-3", "Nova 3 — newest, best for English with proper nouns"),
+            ("nova-2", "Nova 2 — previous generation")
+        ]
+        case .appleSpeech: return [("system", "System (on-device)")]
         }
     }
 }
@@ -46,6 +68,27 @@ public enum LLMProviderID: String, Codable, CaseIterable, Sendable {
         case .openai: return "gpt-4o-mini"
         case .anthropic: return "claude-haiku-4-5-20251001"
         case .disabled: return ""
+        }
+    }
+
+    public var knownModels: [(id: String, label: String)] {
+        switch self {
+        case .groq: return [
+            ("llama-3.3-70b-versatile", "Llama 3.3 70B — recommended"),
+            ("llama-3.1-70b-versatile", "Llama 3.1 70B — older fallback"),
+            ("mixtral-8x7b-32768", "Mixtral 8x7B — long context")
+        ]
+        case .openai: return [
+            ("gpt-4o-mini", "GPT-4o Mini — fast + cheap"),
+            ("gpt-4o", "GPT-4o — most accurate (more expensive)"),
+            ("gpt-4.1-mini", "GPT-4.1 Mini")
+        ]
+        case .anthropic: return [
+            ("claude-haiku-4-5-20251001", "Claude Haiku 4.5 — fast"),
+            ("claude-sonnet-4-6", "Claude Sonnet 4.6 — best for nuanced rewrites"),
+            ("claude-opus-4-7", "Claude Opus 4.7 — most accurate")
+        ]
+        case .disabled: return []
         }
     }
 }

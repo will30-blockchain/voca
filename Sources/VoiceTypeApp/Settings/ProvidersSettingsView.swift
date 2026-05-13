@@ -21,8 +21,11 @@ struct ProvidersSettingsView: View {
                         }
                     }
 
-                    TextField("Model", text: bind(\.sttModel))
-                        .textFieldStyle(.roundedBorder)
+                    ModelPicker(
+                        label: "Model",
+                        known: store.settings.sttProvider.knownModels,
+                        selection: bind(\.sttModel)
+                    )
                 }
 
                 section("LLM refinement") {
@@ -37,9 +40,12 @@ struct ProvidersSettingsView: View {
                         }
                     }
 
-                    TextField("Model", text: bind(\.llmModel))
-                        .textFieldStyle(.roundedBorder)
-                        .disabled(store.settings.llmProvider == .disabled)
+                    ModelPicker(
+                        label: "Model",
+                        known: store.settings.llmProvider.knownModels,
+                        selection: bind(\.llmModel)
+                    )
+                    .disabled(store.settings.llmProvider == .disabled)
                 }
 
                 section("API keys") {
@@ -91,6 +97,46 @@ struct ProvidersSettingsView: View {
         Binding(
             get: { store.settings[keyPath: keyPath] },
             set: { value in store.update { $0[keyPath: keyPath] = value } }
+        )
+    }
+}
+
+private struct ModelPicker: View {
+    let label: String
+    let known: [(id: String, label: String)]
+    @Binding var selection: String
+    @State private var custom = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Picker(label, selection: pickerBinding) {
+                    ForEach(known, id: \.id) { m in
+                        Text(m.label).tag(m.id)
+                    }
+                    Text("Custom…").tag("__custom__")
+                }
+                .pickerStyle(.menu)
+            }
+            if custom || known.first(where: { $0.id == selection }) == nil {
+                TextField("Custom model name", text: $selection)
+                    .textFieldStyle(.roundedBorder)
+                    .onAppear { custom = true }
+            }
+        }
+    }
+
+    private var pickerBinding: Binding<String> {
+        Binding(
+            get: { custom ? "__custom__" : selection },
+            set: { value in
+                if value == "__custom__" {
+                    custom = true
+                } else {
+                    custom = false
+                    selection = value
+                }
+            }
         )
     }
 }

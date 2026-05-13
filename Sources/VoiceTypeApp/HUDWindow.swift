@@ -25,7 +25,10 @@ final class HUDWindowController {
         panel.isMovableByWindowBackground = false
         panel.isFloatingPanel = true
         panel.hidesOnDeactivate = false
-        panel.hasShadow = true
+        // Let SwiftUI draw the shadow under the rounded pill — the NSPanel's
+        // own shadow is rectangular and would peek out around the pill edges
+        // as a second visible border.
+        panel.hasShadow = false
         panel.backgroundColor = .clear
         panel.isOpaque = false
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
