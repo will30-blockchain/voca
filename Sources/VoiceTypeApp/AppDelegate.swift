@@ -43,9 +43,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         hudController = HUDWindowController(engine: engine, settingsStore: settingsStore)
 
-        // Wire hotkeys → engine (tap-toggle).
+        // Wire hotkeys → engine (tap-toggle + ESC to cancel).
         hotkeys.onToggle = { [weak self] mode in
             Task { await self?.engine.toggleRecording(mode: mode) }
+        }
+        hotkeys.onEscape = { [weak self] in
+            // cancelRecording is a no-op outside .recording, so this is
+            // safe to fire on every ESC press globally.
+            Task { await self?.engine.cancelRecording() }
         }
         hotkeys.start()
 

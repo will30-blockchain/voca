@@ -21,10 +21,14 @@ import Carbon.HIToolbox
 @MainActor
 public final class HotkeyManager {
     public var onToggle: ((DictationMode) -> Void)?
+    /// Fired when the user presses Escape. Wired to `engine.cancelRecording()`
+    /// so the user can bail out of an active dictation without paste.
+    public var onEscape: (() -> Void)?
 
     // Device-dependent modifier bits (bottom 16 bits of NSEvent.ModifierFlags).
     private static let rightOptionBit: UInt = 0x40
     private static let rightShiftBit: UInt  = 0x04
+    private static let escapeKeyCode: Int64 = 53 // kVK_Escape
 
     /// Max duration of a key press that still counts as a "tap".
     public var tapWindow: TimeInterval = 0.5
@@ -60,7 +64,9 @@ public final class HotkeyManager {
     }
 
     private func installEventTap() {
-        let mask: CGEventMask = (1 << CGEventType.flagsChanged.rawValue)
+        let mask: CGEventMask =
+            (1 << CGEventType.flagsChanged.rawValue) |
+            (1 << CGEventType.keyDown.rawValue)
 
         let callback: CGEventTapCallBack = { _, type, event, refcon in
             guard let refcon else { return Unmanaged.passUnretained(event) }
@@ -71,8 +77,18 @@ public final class HotkeyManager {
                 return Unmanaged.passUnretained(event)
             }
 
-            let rawFlags = UInt(event.flags.rawValue)
-            DispatchQueue.main.async { mgr.evaluate(rawFlags: rawFlags) }
+            switch type {
+            case .flagsChanged:
+                let rawFlags = UInt(event.flags.rawValue)
+                DispatchQueue.main.async { mgr.evaluate(rawFlags: rawFlags) }
+            case .keyDown:
+                let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
+                if keyCode == HotkeyManager.escapeKeyCode {
+                    DispatchQueue.main.async { mgr.onEscape?() }
+                }
+            default:
+                break
+            }
             return Unmanaged.passUnretained(event)
         }
 
