@@ -83,13 +83,12 @@ public final class VoiceTypeEngine: ObservableObject {
                 return
             }
 
-            // Skip the API call entirely on near-silent audio. Whisper will
-            // hallucinate "Thank you" / "Bye" on silence; we don't pay for
-            // that and we don't paste it.
+            // Skip the API call on completely silent recordings to save the
+            // round-trip and avoid the classic "Thank you" hallucination.
+            // Threshold is very low (0.004) so real-but-quiet speech still
+            // makes it through — see HallucinationFilter for the rationale.
             if recording.peakLevel < HallucinationFilter.silenceThreshold {
-                AppLog.engine.info("Silent recording (peak=\(recording.peakLevel, format: .fixed(precision: 3))), dropping.")
-                state = .error(message: "No speech detected — try again, and check Mic input in System Settings.")
-                try? await Task.sleep(nanoseconds: 2_500_000_000)
+                AppLog.engine.info("Silent recording (peak=\(recording.peakLevel, format: .fixed(precision: 4))), skipping transcribe.")
                 state = .idle
                 return
             }
@@ -97,15 +96,16 @@ public final class VoiceTypeEngine: ObservableObject {
             state = .processing(mode: mode, stage: "Transcribing…")
             let raw = try await transcribe(recording)
 
-            // Post-STT hallucination guard: Whisper sometimes still returns
-            // "Thank you" even on non-zero audio (background noise without
-            // speech). Drop if it matches a known outro phrase.
-            if HallucinationFilter.looksHallucinated(raw.text) {
-                AppLog.engine.info("Filtered hallucinated transcript: \(raw.text, privacy: .public)")
-                state = .error(message: "No speech detected (filtered Whisper hallucination).")
-                try? await Task.sleep(nanoseconds: 2_500_000_000)
+            // Final guard: drop only if the transcript is an exact known
+            // Whisper outro AND the audio was effectively silent. Everything
+            // else — including short answers like "OK" or "好" — passes.
+            switch HallucinationFilter.decide(transcript: raw.text, peakLevel: recording.peakLevel) {
+            case .drop(let reason):
+                AppLog.engine.info("Dropped transcript — \(reason, privacy: .public)")
                 state = .idle
                 return
+            case .keep:
+                break
             }
 
             state = .processing(mode: mode, stage: mode == .translate ? "Translating…" : "Refining…")
