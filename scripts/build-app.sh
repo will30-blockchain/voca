@@ -38,6 +38,12 @@ mkdir -p "${APP_DIR}/Contents/Resources"
 cp "${EXE_PATH}" "${APP_DIR}/Contents/MacOS/${APP_NAME}"
 chmod +x "${APP_DIR}/Contents/MacOS/${APP_NAME}"
 
+# Bundle icon. Rebuilds the .icns from Resources/logo.png if it's missing.
+if [[ ! -f Resources/VoiceType.icns ]]; then
+    "$(dirname "$0")/make-icon.sh"
+fi
+cp Resources/VoiceType.icns "${APP_DIR}/Contents/Resources/VoiceType.icns"
+
 cat > "${APP_DIR}/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -54,6 +60,10 @@ cat > "${APP_DIR}/Contents/Info.plist" <<PLIST
     <key>CFBundleName</key>
     <string>${APP_NAME}</string>
     <key>CFBundleDisplayName</key>
+    <string>VoiceType</string>
+    <key>CFBundleIconFile</key>
+    <string>VoiceType.icns</string>
+    <key>CFBundleIconName</key>
     <string>VoiceType</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
