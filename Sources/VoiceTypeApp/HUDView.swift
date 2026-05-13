@@ -1,90 +1,125 @@
 import SwiftUI
 import VoiceTypeCore
 
+/// Floating bottom pill, inspired by Typeless: live waveform in the middle,
+/// cancel (✗) on the left, confirm (✓) on the right.
 struct HUDView: View {
     @ObservedObject var engine: VoiceTypeEngine
-    @State private var pulse: CGFloat = 0.6
+    @ObservedObject var recorder: AudioRecorder
+    var onCancel: () -> Void
+    var onConfirm: () -> Void
 
     var body: some View {
         HStack(spacing: 14) {
-            indicator
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(DesignTokens.Font.title)
-                    .foregroundStyle(.primary)
-                Text(subtitle)
-                    .font(DesignTokens.Font.caption)
-                    .foregroundStyle(.secondary)
-            }
-            Spacer(minLength: 0)
+            cancelButton
+            Waveform(level: recorder.level, color: accentColor, isLive: isRecording)
+                .frame(height: 28)
+            confirmButton
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, 14)
         .padding(.vertical, 12)
+        .frame(minWidth: 320)
         .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .fill(.ultraThinMaterial)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(DesignTokens.Color.border, lineWidth: 1)
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(DesignTokens.Color.border)
         )
-        .padding(8)
-        .onAppear { startPulse() }
+        .shadow(color: .black.opacity(0.25), radius: 14, x: 0, y: 6)
     }
 
-    private func startPulse() {
-        withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) {
-            pulse = 1.0
-        }
+    private var isRecording: Bool {
+        if case .recording = engine.state { return true }
+        return false
     }
 
-    private var indicator: some View {
-        ZStack {
-            Circle()
-                .fill(color.opacity(0.18))
-                .frame(width: 42, height: 42)
-                .scaleEffect(isLive ? pulse : 1)
-            Circle()
-                .fill(color)
-                .frame(width: 16, height: 16)
-        }
-    }
-
-    private var isLive: Bool {
+    private var accentColor: Color {
         switch engine.state {
-        case .recording, .processing: return true
-        default: return false
-        }
-    }
-
-    private var color: Color {
-        switch engine.state {
-        case .recording(.translate): return DesignTokens.Color.translate
-        case .recording(.transcribe): return DesignTokens.Color.recording
-        case .processing(let mode, _):
-            return mode == .translate ? DesignTokens.Color.translate : DesignTokens.Color.recording
+        case .recording(.translate), .processing(.translate, _): return DesignTokens.Color.translate
+        case .recording(.transcribe), .processing(.transcribe, _): return DesignTokens.Color.recording
         case .error: return .yellow
         default: return .secondary
         }
     }
 
-    private var title: String {
-        switch engine.state {
-        case .idle: return "VoiceType"
-        case .recording(.transcribe): return "Listening"
-        case .recording(.translate): return "Translating"
-        case .processing(_, let stage): return stage
-        case .error: return "Error"
+    private var cancelButton: some View {
+        Button(action: onCancel) {
+            Image(systemName: "xmark")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.primary)
+                .frame(width: 32, height: 32)
+                .background(Circle().fill(DesignTokens.Color.surfaceElevated))
+                .overlay(Circle().stroke(DesignTokens.Color.border))
         }
+        .buttonStyle(.plain)
+        .help("Cancel — discard this recording")
+        .disabled(!isRecording)
+        .opacity(isRecording ? 1 : 0.35)
     }
 
-    private var subtitle: String {
+    private var confirmButton: some View {
+        Button(action: onConfirm) {
+            Image(systemName: stateGlyph)
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(.white)
+                .frame(width: 32, height: 32)
+                .background(Circle().fill(accentColor))
+        }
+        .buttonStyle(.plain)
+        .help(isRecording ? "Stop and paste" : "Processing…")
+        .disabled(!isRecording)
+        .opacity(isRecording ? 1 : 0.55)
+    }
+
+    private var stateGlyph: String {
         switch engine.state {
-        case .idle: return "Right Option to dictate"
-        case .recording(.transcribe): return "Release Right Option to send"
-        case .recording(.translate): return "Release keys to translate"
-        case .processing: return "Working…"
-        case .error(let msg): return msg
+        case .recording: return "checkmark"
+        case .processing: return "ellipsis"
+        case .error: return "exclamationmark"
+        default: return "checkmark"
+        }
+    }
+}
+
+/// Animated bar-waveform driven by the recorder's live RMS level. Each bar
+/// holds a delayed sample so the cluster looks like a rolling waveform.
+struct Waveform: View {
+    let level: Float
+    let color: Color
+    let isLive: Bool
+
+    @State private var history: [Float] = Array(repeating: 0, count: 22)
+    @State private var timer: Timer?
+
+    var body: some View {
+        GeometryReader { proxy in
+            HStack(spacing: 3) {
+                ForEach(0..<history.count, id: \.self) { i in
+                    let v = max(0.06, history[i])
+                    Capsule()
+                        .fill(color.opacity(isLive ? 0.9 : 0.35))
+                        .frame(width: 3, height: max(3, CGFloat(v) * proxy.size.height))
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+            .animation(.easeOut(duration: 0.08), value: history)
+        }
+        .onAppear { start() }
+        .onDisappear { timer?.invalidate() }
+        .onChange(of: isLive) { _, _ in /* keep ticking */ }
+    }
+
+    private func start() {
+        timer?.invalidate()
+        timer = Timer.scheduledTimer(withTimeInterval: 1.0 / 18.0, repeats: true) { _ in
+            var next = history
+            next.removeFirst()
+            // Light jitter so the waveform looks alive even on flat input.
+            let jitter = Float.random(in: -0.04...0.04)
+            next.append(min(1, max(0, (isLive ? level : 0) + jitter)))
+            history = next
         }
     }
 }

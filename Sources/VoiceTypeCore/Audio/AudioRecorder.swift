@@ -1,14 +1,19 @@
 import Foundation
 @preconcurrency import AVFoundation
+import Combine
 
 /// Records mono 16-bit PCM at 16 kHz from the default input and exposes
-/// it as a WAV blob — the format every cloud STT accepts.
+/// it as a WAV blob. Also publishes a live RMS level (0…1) so the UI
+/// can render an audio meter / waveform while recording.
 @MainActor
-public final class AudioRecorder {
+public final class AudioRecorder: ObservableObject {
     public struct Recording: Sendable {
         public let audio: Data
         public let duration: TimeInterval
         public let sampleRate: Double
+        /// Peak normalised amplitude (0…1) seen during the recording.
+        /// Useful for hallucination filters — silent clips have peakLevel < 0.005.
+        public let peakLevel: Float
     }
 
     public enum RecorderError: LocalizedError {
@@ -26,6 +31,9 @@ public final class AudioRecorder {
             }
         }
     }
+
+    /// Live RMS level, 0…1, updated ~15× per second while recording.
+    @Published public private(set) var level: Float = 0
 
     private let engine = AVAudioEngine()
     private let outputFormat: AVAudioFormat
@@ -54,6 +62,7 @@ public final class AudioRecorder {
         if engine.isRunning { throw RecorderError.alreadyRecording }
         buffer.reset()
         startedAt = Date()
+        level = 0
 
         let input = engine.inputNode
         let inputFormat = input.inputFormat(forBus: 0)
@@ -69,10 +78,7 @@ public final class AudioRecorder {
         let sink = buffer
 
         input.removeTap(onBus: 0)
-        input.installTap(onBus: 0, bufferSize: 1024, format: inputFormat) { tapBuffer, _ in
-            // Real-time thread: encode + push into the lock-guarded buffer.
-            // No Task hops, so we don't drop samples under load and the final
-            // frames are available the instant stop() returns.
+        input.installTap(onBus: 0, bufferSize: 1024, format: inputFormat) { [weak self] tapBuffer, _ in
             guard let outBuffer = AVAudioPCMBuffer(
                 pcmFormat: outFormat,
                 frameCapacity: AVAudioFrameCount(targetRate)
@@ -91,6 +97,13 @@ public final class AudioRecorder {
             guard let channelData = outBuffer.int16ChannelData else { return }
             let count = Int(outBuffer.frameLength)
             sink.append(pointer: channelData[0], count: count)
+
+            // RMS for live meter. Compute on the audio thread to avoid hops.
+            let rms = Self.rms(samples: channelData[0], count: count)
+            let normalised = min(1, rms / 8_000) // 16-bit signal; ~8k is "normal speech"
+            Task { @MainActor [weak self] in
+                self?.level = normalised
+            }
         }
 
         engine.prepare()
@@ -107,14 +120,36 @@ public final class AudioRecorder {
         guard engine.isRunning else { throw RecorderError.notRecording }
         engine.inputNode.removeTap(onBus: 0)
         engine.stop()
+        level = 0
 
         let duration: TimeInterval = startedAt.map { Date().timeIntervalSince($0) } ?? 0
         startedAt = nil
 
         let frames = buffer.snapshotAndReset()
+        let peak = Self.peak(samples: frames)
         let wav = WAVEncoder.encode(samples: frames, sampleRate: Int32(targetSampleRate))
-        AppLog.audio.info("Recording stopped. frames=\(frames.count) bytes=\(wav.count) dur=\(duration, format: .fixed(precision: 2)) s")
-        return Recording(audio: wav, duration: duration, sampleRate: targetSampleRate)
+        AppLog.audio.info("Recording stopped. frames=\(frames.count) bytes=\(wav.count) dur=\(duration, format: .fixed(precision: 2)) s peak=\(peak, format: .fixed(precision: 3))")
+        return Recording(audio: wav, duration: duration, sampleRate: targetSampleRate, peakLevel: peak)
+    }
+
+    private nonisolated static func rms(samples: UnsafePointer<Int16>, count: Int) -> Float {
+        guard count > 0 else { return 0 }
+        var acc: Double = 0
+        for i in 0..<count {
+            let v = Double(samples[i])
+            acc += v * v
+        }
+        return Float((acc / Double(count)).squareRoot())
+    }
+
+    private nonisolated static func peak(samples: [Int16]) -> Float {
+        guard !samples.isEmpty else { return 0 }
+        var max16: Int16 = 0
+        for s in samples {
+            let mag = s == Int16.min ? Int16.max : (s < 0 ? -s : s)
+            if mag > max16 { max16 = mag }
+        }
+        return Float(max16) / Float(Int16.max)
     }
 }
 

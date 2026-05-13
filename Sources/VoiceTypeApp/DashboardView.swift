@@ -12,9 +12,12 @@ struct DashboardView: View {
     let openDictionary: () -> Void
     let openMemory: () -> Void
 
+    @State private var permissionTicker = 0
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: DesignTokens.Space.lg) {
+                permissionBanner
                 statusCard
                 hotkeyCard
                 if missingKey {
@@ -27,27 +30,114 @@ struct DashboardView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(DesignTokens.Color.surface)
+        .onReceive(Timer.publish(every: 2, on: .main, in: .common).autoconnect()) { _ in
+            // Re-evaluate permission status periodically so the banner clears
+            // as soon as the user grants access in System Settings.
+            permissionTicker &+= 1
+        }
+    }
+
+    private var micGranted: Bool { Permissions.microphoneStatus() == .granted }
+    private var axGranted: Bool { Permissions.accessibilityTrusted }
+
+    @ViewBuilder
+    private var permissionBanner: some View {
+        let _ = permissionTicker // re-render trigger
+        if !micGranted || !axGranted {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.shield.fill")
+                        .foregroundStyle(.yellow)
+                    Text("Permissions needed").font(.headline)
+                }
+                if !axGranted {
+                    permissionRow(
+                        title: "Accessibility",
+                        body: "Required so the global Right Option hotkey works in any app and so paste can be synthesized.",
+                        action: "Open Accessibility settings",
+                        run: Permissions.openAccessibilitySettings
+                    )
+                }
+                if !micGranted {
+                    permissionRow(
+                        title: "Microphone",
+                        body: "Required to capture your speech.",
+                        action: "Open Microphone settings",
+                        run: Permissions.openMicrophoneSettings
+                    )
+                }
+                Text("After enabling a permission, quit VoiceType (⌘Q) and relaunch — macOS only refreshes Accessibility trust on launch.")
+                    .font(DesignTokens.Font.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(18)
+            .background(
+                RoundedRectangle(cornerRadius: DesignTokens.Radius.md)
+                    .fill(Color.yellow.opacity(0.12))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: DesignTokens.Radius.md)
+                    .stroke(Color.yellow.opacity(0.5), lineWidth: 1)
+            )
+        }
+    }
+
+    private func permissionRow(title: String, body: String, action: String, run: @escaping () -> Void) -> some View {
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(.body.weight(.semibold))
+                Text(body).font(DesignTokens.Font.body).foregroundStyle(.secondary)
+            }
+            Spacer()
+            Button(action) { run() }
+                .buttonStyle(.bordered)
+        }
     }
 
     // MARK: - Status
 
     private var statusCard: some View {
-        HStack(alignment: .center, spacing: 16) {
-            statusIndicator
-            VStack(alignment: .leading, spacing: 6) {
-                Text(statusTitle)
-                    .font(.system(size: 24, weight: .semibold, design: .rounded))
-                Text(statusSubtitle)
-                    .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .center, spacing: 16) {
+                statusIndicator
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(statusTitle)
+                        .font(.system(size: 24, weight: .semibold, design: .rounded))
+                    Text(statusSubtitle)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                if engineIsRecording {
+                    Button(role: .destructive) {
+                        Task { await engine.cancelRecording() }
+                    } label: {
+                        Label("Cancel", systemImage: "xmark")
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.large)
+                    Button(action: toggleTranscribe) {
+                        Label("Stop & paste", systemImage: "checkmark")
+                            .padding(.horizontal, 6)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    .keyboardShortcut(.return, modifiers: [])
+                } else {
+                    Button(action: toggleTranscribe) {
+                        Label(engineIsActive ? "Working…" : "Start dictation",
+                              systemImage: engineIsActive ? "ellipsis" : "mic.fill")
+                            .padding(.horizontal, 6)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    .keyboardShortcut(.return, modifiers: [])
+                    .disabled(engineIsActive)
+                }
             }
-            Spacer()
-            Button(action: toggleTranscribe) {
-                Label(engineIsActive ? "Stop" : "Start dictation", systemImage: engineIsActive ? "stop.fill" : "mic.fill")
-                    .padding(.horizontal, 6)
+            if engineIsRecording {
+                Waveform(level: engine.recorder.level, color: indicatorColor, isLive: true)
+                    .frame(height: 30)
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .keyboardShortcut(.return, modifiers: [])
         }
         .padding(20)
         .background(
@@ -58,6 +148,11 @@ struct DashboardView: View {
             RoundedRectangle(cornerRadius: DesignTokens.Radius.lg)
                 .stroke(DesignTokens.Color.border)
         )
+    }
+
+    private var engineIsRecording: Bool {
+        if case .recording = engine.state { return true }
+        return false
     }
 
     private var engineIsActive: Bool {

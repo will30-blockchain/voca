@@ -14,7 +14,7 @@ final class HUDWindowController {
         self.engine = engine
         self.settingsStore = settingsStore
 
-        let rect = NSRect(x: 0, y: 0, width: 280, height: 84)
+        let rect = NSRect(x: 0, y: 0, width: 360, height: 60)
         let panel = NSPanel(
             contentRect: rect,
             styleMask: [.borderless, .nonactivatingPanel],
@@ -29,9 +29,16 @@ final class HUDWindowController {
         panel.backgroundColor = .clear
         panel.isOpaque = false
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
-        panel.ignoresMouseEvents = true
+        // Allow clicks on the cancel/confirm buttons; the rest of the pill
+        // doesn't react to clicks because it's just a Text/Waveform.
+        panel.ignoresMouseEvents = false
 
-        let host = NSHostingView(rootView: HUDView(engine: engine))
+        let host = NSHostingView(rootView: HUDView(
+            engine: engine,
+            recorder: engine.recorder,
+            onCancel: { Task { await engine.cancelRecording() } },
+            onConfirm: { Task { await engine.endRecording() } }
+        ))
         host.frame = rect
         panel.contentView = host
         self.window = panel
@@ -79,7 +86,7 @@ final class HUDWindowController {
         let size = window.frame.size
         let origin = NSPoint(
             x: frame.midX - size.width / 2,
-            y: frame.minY + 28
+            y: frame.minY + 60
         )
         window.setFrameOrigin(origin)
     }

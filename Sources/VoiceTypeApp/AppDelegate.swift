@@ -7,14 +7,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let settingsStore = SettingsStore()
     let memory = PersonalMemory()
     let dictionary = UserDictionary()
-    let recorder = AudioRecorder()
     let injector = TextInjector()
     let hotkeys = HotkeyManager()
     lazy var engine = VoiceTypeEngine(
         settingsStore: settingsStore,
         memory: memory,
         dictionary: dictionary,
-        recorder: recorder,
+        recorder: AudioRecorder(),
         injector: injector
     )
 

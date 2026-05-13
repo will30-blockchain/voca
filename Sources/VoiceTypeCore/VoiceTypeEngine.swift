@@ -18,11 +18,11 @@ public final class VoiceTypeEngine: ObservableObject {
     @Published public private(set) var state: EngineState = .idle
 
     public let history: TranscriptHistory
+    public let recorder: AudioRecorder
 
     private let settingsStore: SettingsStore
     private let memory: PersonalMemory
     private let dictionary: UserDictionary
-    private let recorder: AudioRecorder
     private let injector: TextInjector
     private let urlSession: URLSession
 
@@ -83,8 +83,30 @@ public final class VoiceTypeEngine: ObservableObject {
                 return
             }
 
+            // Skip the API call entirely on near-silent audio. Whisper will
+            // hallucinate "Thank you" / "Bye" on silence; we don't pay for
+            // that and we don't paste it.
+            if recording.peakLevel < HallucinationFilter.silenceThreshold {
+                AppLog.engine.info("Silent recording (peak=\(recording.peakLevel, format: .fixed(precision: 3))), dropping.")
+                state = .error(message: "No speech detected — try again, and check Mic input in System Settings.")
+                try? await Task.sleep(nanoseconds: 2_500_000_000)
+                state = .idle
+                return
+            }
+
             state = .processing(mode: mode, stage: "Transcribing…")
             let raw = try await transcribe(recording)
+
+            // Post-STT hallucination guard: Whisper sometimes still returns
+            // "Thank you" even on non-zero audio (background noise without
+            // speech). Drop if it matches a known outro phrase.
+            if HallucinationFilter.looksHallucinated(raw.text) {
+                AppLog.engine.info("Filtered hallucinated transcript: \(raw.text, privacy: .public)")
+                state = .error(message: "No speech detected (filtered Whisper hallucination).")
+                try? await Task.sleep(nanoseconds: 2_500_000_000)
+                state = .idle
+                return
+            }
 
             state = .processing(mode: mode, stage: mode == .translate ? "Translating…" : "Refining…")
             let finalText = try await refine(raw: raw, mode: mode)
