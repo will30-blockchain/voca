@@ -51,7 +51,6 @@ struct HUDView: View {
                 .strokeBorder(DesignTokens.Color.border, lineWidth: 0.5)
         )
         .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.pill, style: .continuous))
-        .shadow(color: .black.opacity(0.12), radius: 20, x: 0, y: 6)
     }
 
     private var processingStage: ProcessingStage? {
@@ -106,7 +105,6 @@ struct HUDView: View {
                 .strokeBorder(DesignTokens.Color.danger.opacity(0.35), lineWidth: 0.5)
         )
         .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.pill, style: .continuous))
-        .shadow(color: .black.opacity(0.12), radius: 20, x: 0, y: 6)
     }
 
     private var errorMessage: String {

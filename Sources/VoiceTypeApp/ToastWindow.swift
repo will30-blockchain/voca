@@ -173,7 +173,6 @@ private struct ToastView: View {
             RoundedRectangle(cornerRadius: DesignTokens.Radius.md, style: .continuous)
                 .strokeBorder(DesignTokens.Color.border, lineWidth: 0.5)
         )
-        .shadow(color: .black.opacity(0.10), radius: 14, x: 0, y: 4)
         .padding(8)
     }
 }
