@@ -1,13 +1,13 @@
 #!/bin/bash
-# Build VoiceType.icns from Resources/logo.png. The .icns is committed to
+# Build VOCA.icns from Resources/logo.png. The .icns is committed to
 # Resources/ and consumed by build-app.sh which copies it into the bundle.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
 SRC="Resources/logo.png"
-ICONSET="Resources/VoiceType.iconset"
-OUT="Resources/VoiceType.icns"
+ICONSET="Resources/VOCA.iconset"
+OUT="Resources/VOCA.icns"
 
 if [[ ! -f "${SRC}" ]]; then
     echo "❌ Missing ${SRC}. Re-run logo generation first." >&2

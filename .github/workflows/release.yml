@@ -1,0 +1,63 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build .app + .dmg and publish
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: version
+        env:
+          GIT_REF: ${{ github.ref }}
+        run: |
+          version="${GIT_REF#refs/tags/v}"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "VOCA version: $version"
+
+      - name: Install create-dmg
+        run: brew install create-dmg
+
+      - name: Set up code-signing identity
+        run: ./scripts/setup-signing.sh
+
+      - name: Build VOCA.app
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: ./scripts/build-app.sh
+
+      - name: Package DMG
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: ./scripts/make-dmg.sh "$VERSION"
+
+      - name: Generate checksum
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          cd dist
+          shasum -a 256 "VOCA-$VERSION.dmg" > "VOCA-$VERSION.dmg.sha256"
+          cat "VOCA-$VERSION.dmg.sha256"
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        with:
+          name: VOCA ${{ steps.version.outputs.version }}
+          body_path: CHANGELOG.md
+          draft: false
+          prerelease: false
+          fail_on_unmatched_files: true
+          files: |
+            dist/VOCA-${{ steps.version.outputs.version }}.dmg
+            dist/VOCA-${{ steps.version.outputs.version }}.dmg.sha256

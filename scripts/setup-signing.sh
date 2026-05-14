@@ -10,8 +10,8 @@
 # keeps the identity constant.
 set -euo pipefail
 
-CERT_CN="VoiceType Dev"
-KEYCHAIN_NAME="voicetype-signing.keychain-db"
+CERT_CN="VOCA Dev"
+KEYCHAIN_NAME="voca-signing.keychain-db"
 KEYCHAIN_PATH="${HOME}/Library/Keychains/${KEYCHAIN_NAME}"
 
 if security find-identity -p codesigning -v "${KEYCHAIN_PATH}" 2>/dev/null | grep -qF "\"${CERT_CN}\""; then

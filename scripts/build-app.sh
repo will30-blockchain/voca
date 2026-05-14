@@ -1,17 +1,19 @@
 #!/bin/bash
-# Build VoiceType.app — a proper macOS bundle with Info.plist for
-# microphone + accessibility permissions, signed with a stable self-signed
-# identity so macOS TCC remembers permissions across rebuilds.
+# Build VOCA.app — a proper macOS bundle with Info.plist for microphone +
+# accessibility permissions, signed with a stable self-signed identity so
+# macOS TCC remembers permissions across rebuilds.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
 CONFIG=${CONFIG:-release}
-APP_NAME="VoiceType"
-BUNDLE_ID="com.voicetype.app"
+APP_NAME="VOCA"
+BUNDLE_ID="com.voca.app"
+DISPLAY_NAME="VOCA"
+VERSION=${VERSION:-0.1.0}
 DIST_DIR="dist"
 APP_DIR="${DIST_DIR}/${APP_NAME}.app"
-CERT_CN="VoiceType Dev"
+CERT_CN="VOCA Dev"
 
 # Ensure a stable signing identity exists.
 if ! security find-identity -p codesigning -v 2>/dev/null | grep -qF "\"${CERT_CN}\""; then
@@ -39,10 +41,10 @@ cp "${EXE_PATH}" "${APP_DIR}/Contents/MacOS/${APP_NAME}"
 chmod +x "${APP_DIR}/Contents/MacOS/${APP_NAME}"
 
 # Bundle icon. Rebuilds the .icns from Resources/logo.png if it's missing.
-if [[ ! -f Resources/VoiceType.icns ]]; then
+if [[ ! -f Resources/VOCA.icns ]]; then
     "$(dirname "$0")/make-icon.sh"
 fi
-cp Resources/VoiceType.icns "${APP_DIR}/Contents/Resources/VoiceType.icns"
+cp Resources/VOCA.icns "${APP_DIR}/Contents/Resources/VOCA.icns"
 
 cat > "${APP_DIR}/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -60,15 +62,15 @@ cat > "${APP_DIR}/Contents/Info.plist" <<PLIST
     <key>CFBundleName</key>
     <string>${APP_NAME}</string>
     <key>CFBundleDisplayName</key>
-    <string>VoiceType</string>
+    <string>${DISPLAY_NAME}</string>
     <key>CFBundleIconFile</key>
-    <string>VoiceType.icns</string>
+    <string>VOCA.icns</string>
     <key>CFBundleIconName</key>
-    <string>VoiceType</string>
+    <string>VOCA</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>0.1.0</string>
+    <string>${VERSION}</string>
     <key>CFBundleVersion</key>
     <string>1</string>
     <key>LSMinimumSystemVersion</key>
@@ -78,16 +80,16 @@ cat > "${APP_DIR}/Contents/Info.plist" <<PLIST
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
     <key>NSMicrophoneUsageDescription</key>
-    <string>VoiceType needs access to your microphone to transcribe your speech.</string>
+    <string>VOCA needs access to your microphone to transcribe your speech.</string>
     <key>NSSpeechRecognitionUsageDescription</key>
-    <string>VoiceType uses on-device Apple Speech as an offline transcription option.</string>
+    <string>VOCA uses on-device Apple Speech as an offline transcription option.</string>
     <key>NSAppleEventsUsageDescription</key>
-    <string>VoiceType inserts transcribed text by simulating a paste shortcut.</string>
+    <string>VOCA inserts transcribed text by simulating a paste shortcut.</string>
 </dict>
 </plist>
 PLIST
 
-ENTITLEMENTS="$(dirname "$0")/VoiceType.entitlements"
+ENTITLEMENTS="$(dirname "$0")/VOCA.entitlements"
 echo "▸ Signing with '${CERT_CN}' + entitlements"
 codesign --force --deep --sign "${CERT_CN}" \
     --options runtime \

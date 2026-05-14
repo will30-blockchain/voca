@@ -1,110 +1,150 @@
-# VoiceType
+# VOCA — bring-your-own-key voice dictation for macOS
 
-A native macOS dictation and translation app inspired by **Typeless**, but
-runs on **your own API keys** so you can pick the cheapest, fastest
-transcription model — Groq Whisper-large is the recommended default.
+VOCA is a native macOS menu-bar dictation and translation tool inspired by
+Typeless, but built around the principle that **your speech, your API keys,
+your data**. Pick the fastest, cheapest model on the market; pay only what you
+use; nothing is stored on someone else's server.
+
+```
+   ▎▎█▎▎  ⌶
+   speech → typed text
+```
+
+[![macOS 14+](https://img.shields.io/badge/macOS-14%2B-black?logo=apple)](#)
+[![License: MIT](https://img.shields.io/badge/License-MIT-orange.svg)](LICENSE)
+[![Build](https://github.com/your-org/voca-ai-typer/actions/workflows/ci.yml/badge.svg)](https://github.com/your-org/voca-ai-typer/actions)
+
+---
+
+## Why VOCA
+
+- **Bring your own keys.** Groq, OpenAI, Anthropic, Deepgram, or fully offline
+  via Apple Speech. The cheapest pairing (Groq Whisper + Llama 3.3) costs a
+  fraction of a cent per dictation.
+- **LLM polish.** Drops filler words, adds punctuation, honours voice commands
+  ("new line", "period"), respects your glossary — without inventing content.
+- **Personal dictionary that learns.** Names, acronyms, and jargon you say
+  often get added automatically when you fix a typo right after dictation,
+  Typeless-style. You always see what was learned, with one-tap Undo.
+- **Translate mode.** Hold Right Shift while tapping Right Option to dictate
+  in one language and paste the translation in another.
+- **Flat, paper-like UI.** No glass effects, no glow, no AI sheen. Just
+  warm-white surfaces and SF Pro.
 
 ## Features
 
-- **Push-to-talk dictation** — hold **Right Option** to record, release to paste.
-- **Push-to-talk translation** — hold **Right Option + Right Shift** to dictate
-  in your source language and paste the translated text in your target.
-- **LLM refinement** — raw transcripts are polished by an LLM that removes
-  filler words, fixes punctuation, honours voice commands ("new line",
-  "new paragraph", "comma", "period"…), and respects your glossary.
-- **Personal dictionary** — store proper nouns and jargon that should always
-  be spelled a specific way.
-- **Adaptive memory** — phrases you use often are tracked and fed back to the
-  transcription model as bias prompts.
-- **Bring your own model**
-  - **STT**: Groq Whisper (recommended), OpenAI Whisper, Deepgram Nova, or
-    Apple Speech (on-device, free, offline).
-  - **LLM**: Groq Llama 3.3 70B (recommended), OpenAI GPT, Anthropic Claude,
-    or *disabled* if you want raw transcripts.
-- **Menu-bar only** — no dock icon, no window unless you open Settings.
+| | |
+|---|---|
+| 🎙 Hotkey | Tap **Right Option** to start/stop dictation |
+| 🌐 Translate | Tap **Right Option + Right Shift** for translation |
+| 🔊 Live meter | RMS-driven waveform tells you the mic is actually capturing |
+| ⌥ Refine | LLM cleans punctuation, fixes Whisper hallucinations, applies tone |
+| 📖 Dictionary | Glossary of proper nouns biases STT *and* LLM editor |
+| 🧠 Memory | Phrases you use often, plus free-form personal facts |
+| ↻ Retry | Network blip mid-pipeline → audio stays buffered, retry on tap |
+| ⎋ ESC | Press anywhere to cancel an in-progress recording |
+| 📋 Logs | Settings → Logs shows every pipeline step + per-stage latency |
 
 ## Quickstart
 
-```bash
-git clone <this repo>
-cd VoiceType
-./scripts/setup-signing.sh   # one-time: create a stable code-signing cert
-./scripts/build-app.sh       # build + sign the .app
-open dist/VoiceType.app
-```
-
-> The first `codesign` call may ask for your login password — click
-> **Always Allow** so future builds don't prompt.
-
-## Troubleshooting permissions
-
-macOS remembers Microphone and Accessibility grants by the app's code
-signature. If you rebuild with a different signature, macOS treats it as
-a brand-new app and forgets the grants.
-
-`scripts/setup-signing.sh` creates a stable self-signed certificate
-("VoiceType Dev") so every subsequent build keeps the same signing
-identity. Run it once. Always build via `scripts/build-app.sh`.
-
-**If permissions still get lost or VoiceType doesn't appear in
-System Settings → Microphone:**
+Prerequisites:
+- macOS 14 Sonoma or later
+- Xcode 15+ with Swift toolchain
+- A Groq, OpenAI, Anthropic, or Deepgram API key (or use Apple Speech offline)
 
 ```bash
-./scripts/reset-permissions.sh
-open dist/VoiceType.app
+git clone https://github.com/your-org/voca-ai-typer.git
+cd voca-ai-typer
+./scripts/setup-signing.sh   # one-time: create a stable local signing cert
+./scripts/build-app.sh       # build + sign VOCA.app
+open dist/VOCA.app
 ```
-
-That wipes the orphaned TCC entries and forces macOS to re-prompt.
-After granting both Microphone *and* Accessibility, **quit VoiceType
-(⌘Q) and relaunch** — Accessibility trust is only refreshed at
-process start.
 
 On first launch:
+
 1. Grant **Microphone** access when prompted.
-2. Grant **Accessibility** access (System Settings → Privacy & Security →
-   Accessibility). Without it, the global hotkey won't work and the app
-   can't paste.
-3. Open **Settings → Providers** and paste your **Groq API key**
-   (https://console.groq.com/keys). That's enough for full functionality —
-   Groq handles both transcription (Whisper) and refinement (Llama).
+2. Open System Settings → Privacy & Security → Accessibility, toggle VOCA on.
+3. Quit VOCA (⌘Q) and relaunch — macOS only refreshes Accessibility trust at
+   process start.
+4. Open VOCA's Settings → Providers, paste your Groq API key from
+   <https://console.groq.com/keys>.
+5. Tap Right Option, speak, tap again — your transcript is pasted at the
+   cursor.
 
-## Hotkeys
+## Pre-built downloads
 
-| Action | Hotkey |
-|---|---|
-| Dictate (transcribe in same language) | Hold **Right Option** |
-| Translate (dictate, paste translated) | Hold **Right Option + Right Shift** |
-| Open Settings | Menu-bar icon → Settings |
+Visit [Releases](https://github.com/your-org/voca-ai-typer/releases) for a
+signed `.dmg` of the latest version.
 
-To avoid clashing with Option+vowel accent input, hotkeys engage after a
-**180 ms hold**.
+Until a Developer ID signature is available, you may need to right-click the
+app and choose **Open** the first time to bypass Gatekeeper.
 
-## Storage
+## Architecture
 
-User data lives in `~/Library/Application Support/VoiceType/`:
+```
+Sources/
+  VOCACore/                 — Pure-Swift, AppKit-free domain logic
+    Audio/                  — AVAudioEngine recorder + RMS meter + SoundPlayer
+    Hotkeys/                — CGEvent-tap based global tap-toggle hotkeys
+    Transcription/          — STT provider clients: Groq, OpenAI, Deepgram, Apple
+    LLM/                    — LLM provider clients: Groq, OpenAI, Anthropic
+    Refinement/             — Prompts, HallucinationFilter
+    Learning/               — CorrectionDiff, AXTextReader, CorrectionLearner
+    Memory/ Dictionary/     — File-backed JSON stores
+    History/ Logging/       — Transcript log + event log
+    Settings/ Util/         — Persistence helpers, SupportDirectory
+    Permissions/            — Mic + AX permission helpers
+    VOCAEngine.swift        — Top-level pipeline orchestrator
 
-- `settings.json` — provider choices and API keys.
-- `dictionary.json` — your glossary.
-- `memory.json` — auto-learned phrases and personal facts.
+  VOCA/                     — macOS app (menu-bar, windows, HUD, toast)
+    AppDelegate · main · MenuBarController
+    DashboardWindow + DashboardView
+    HUDWindow + HUDView (floating pill with waveform / progress / retry)
+    ToastWindow             — "X added to dictionary" notification
+    Settings/               — 7 panes (General, Providers, Languages,
+                              Dictionary, Memory, Logs, About)
+    DesignTokens.swift      — Single source of truth for colours, type,
+                              spacing, radius. Inspired by SuperCard's
+                              "Professional Warmth".
 
-> ⚠ API keys are currently stored plain-text. Keychain integration is on the
-> roadmap.
+Tests/VOCACoreTests/        — Pure-Swift unit tests
 
-## Development
-
-```bash
-swift build           # compile
-swift test            # run unit tests
-./scripts/build-app.sh   # build the .app bundle and ad-hoc sign it
+scripts/
+  setup-signing.sh          — Generates a stable self-signed cert so TCC
+                              remembers permissions across rebuilds
+  build-app.sh              — swift build + bundle + sign + .icns
+  make-icon.sh              — sips logo.png → VOCA.icns
+  reset-permissions.sh      — tccutil reset for the bundle ID
 ```
 
-Targets:
-- `VoiceTypeCore` — audio, hotkeys, STT/LLM providers, persistence.
-- `VoiceTypeApp`  — menu-bar app, HUD, Settings UI.
+Read [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full design notes.
 
-## Roadmap (post-v1)
+## Privacy
 
-- Custom hotkeys + per-app tone presets.
-- Move API keys to Keychain.
-- Streaming partial transcripts (Deepgram WebSocket).
-- Local Whisper via `whisper.cpp` for fully-offline mode.
+- Audio never touches disk. The recorded WAV lives in memory and is shipped
+  directly to the provider you configured.
+- API keys live plain-text in `~/Library/Application Support/VOCA/settings.json`
+  for v1. **Keychain integration is on the roadmap.** Treat that file as
+  sensitive.
+- Everything else (dictionary, memory, history, logs) is local to your Mac.
+- VOCA never phones home. The only outbound HTTP requests are to the
+  provider endpoints you select.
+
+## Roadmap
+
+- [ ] Keychain-backed API key storage
+- [ ] Customisable hotkeys
+- [ ] Streaming partial transcripts (Deepgram, OpenAI Realtime)
+- [ ] Local Whisper via `whisper.cpp` for full offline mode
+- [ ] Homebrew Cask submission
+- [ ] Sparkle-based auto-update
+- [ ] Windows companion (`voca-windows`)
+
+## Contributing
+
+PRs welcome. See [`CONTRIBUTING.md`](CONTRIBUTING.md). For non-trivial changes,
+open an issue first to discuss the approach.
+
+## License
+
+MIT — see [`LICENSE`](LICENSE).

@@ -2,21 +2,21 @@
 import PackageDescription
 
 let package = Package(
-    name: "VoiceType",
+    name: "VOCA",
     platforms: [.macOS(.v14)],
     products: [
-        .executable(name: "VoiceType", targets: ["VoiceTypeApp"]),
-        .library(name: "VoiceTypeCore", targets: ["VoiceTypeCore"])
+        .executable(name: "VOCA", targets: ["VOCA"]),
+        .library(name: "VOCACore", targets: ["VOCACore"])
     ],
     targets: [
         .target(
-            name: "VoiceTypeCore",
-            path: "Sources/VoiceTypeCore"
+            name: "VOCACore",
+            path: "Sources/VOCACore"
         ),
         .executableTarget(
-            name: "VoiceTypeApp",
-            dependencies: ["VoiceTypeCore"],
-            path: "Sources/VoiceTypeApp",
+            name: "VOCA",
+            dependencies: ["VOCACore"],
+            path: "Sources/VOCA",
             resources: [.process("Resources")],
             linkerSettings: [
                 .linkedFramework("AppKit"),
@@ -27,9 +27,9 @@ let package = Package(
             ]
         ),
         .testTarget(
-            name: "VoiceTypeCoreTests",
-            dependencies: ["VoiceTypeCore"],
-            path: "Tests/VoiceTypeCoreTests"
+            name: "VOCACoreTests",
+            dependencies: ["VOCACore"],
+            path: "Tests/VOCACoreTests"
         )
     ]
 )
