@@ -51,6 +51,9 @@ final class DashboardWindowController: NSObject, NSWindowDelegate {
         .environmentObject(settingsStore)
         .environmentObject(memory)
         .environmentObject(history)
+        // Pin to light mode so system controls render with dark text on
+        // light chrome — our design system is a single warm light palette.
+        .preferredColorScheme(.light)
 
         let hosting = NSHostingController(rootView: root)
         let window = NSWindow(contentViewController: hosting)
@@ -58,6 +61,8 @@ final class DashboardWindowController: NSObject, NSWindowDelegate {
         window.styleMask = [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView]
         window.titleVisibility = .visible
         window.titlebarAppearsTransparent = true
+        // Force window chrome (titlebar) into aqua so it matches the content.
+        window.appearance = NSAppearance(named: .aqua)
         window.setContentSize(NSSize(width: 760, height: 560))
         window.minSize = NSSize(width: 720, height: 520)
         window.center()

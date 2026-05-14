@@ -32,6 +32,11 @@ struct SettingsView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .background(DesignTokens.Color.surface)
         }
+        // The design system is a single warm light palette ("Professional
+        // Warmth"). Pin every settings pane to light mode so system controls
+        // (Picker, TextField, Toggle) render with dark text on light chrome
+        // and don't go invisible on users running macOS in Dark Mode.
+        .preferredColorScheme(.light)
     }
 }
 

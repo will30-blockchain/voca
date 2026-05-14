@@ -31,6 +31,7 @@ final class HUDWindowController {
         panel.hasShadow = false
         panel.backgroundColor = .clear
         panel.isOpaque = false
+        panel.appearance = NSAppearance(named: .aqua)
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
         // Allow clicks on the cancel/confirm buttons; the rest of the pill
         // doesn't react to clicks because it's just a Text/Waveform.

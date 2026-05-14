@@ -33,6 +33,7 @@ final class ToastWindowController {
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
         panel.ignoresMouseEvents = false
         panel.alphaValue = 0
+        panel.appearance = NSAppearance(named: .aqua)
 
         let host = NSHostingView(rootView: ToastView(
             learner: learner,

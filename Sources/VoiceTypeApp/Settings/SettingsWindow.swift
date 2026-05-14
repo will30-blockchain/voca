@@ -59,6 +59,9 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         let window = NSWindow(contentViewController: hosting)
         window.title = "VoiceType Settings"
         window.styleMask = [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView]
+        // Match the content's pinned light appearance — keeps the titlebar
+        // and sidebar material light too.
+        window.appearance = NSAppearance(named: .aqua)
         window.setContentSize(NSSize(width: 820, height: 560))
         window.minSize = NSSize(width: 720, height: 480)
         window.center()
