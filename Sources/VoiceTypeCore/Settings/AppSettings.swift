@@ -130,6 +130,8 @@ public struct AppSettings: Codable, Sendable, Equatable {
     public var tone: String
     /// Whether to enable adaptive personal memory learning.
     public var learningEnabled: Bool
+    /// Whether to auto-add typo corrections to the dictionary (Typeless-style).
+    public var learnFromCorrections: Bool
     /// Whether the recording HUD should appear.
     public var showHUD: Bool
     /// Inject method.
@@ -160,6 +162,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         translateSourceLanguage: String = "auto",
         tone: String = "natural, concise, faithful to the speaker",
         learningEnabled: Bool = true,
+        learnFromCorrections: Bool = true,
         showHUD: Bool = true,
         injectionMethod: InjectionMethod = .paste,
         playSounds: Bool = true
@@ -174,6 +177,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         self.translateSourceLanguage = translateSourceLanguage
         self.tone = tone
         self.learningEnabled = learningEnabled
+        self.learnFromCorrections = learnFromCorrections
         self.showHUD = showHUD
         self.injectionMethod = injectionMethod
         self.playSounds = playSounds

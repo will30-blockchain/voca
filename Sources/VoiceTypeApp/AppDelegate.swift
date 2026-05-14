@@ -23,6 +23,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var hudController: HUDWindowController?
     private var settingsWindowController: SettingsWindowController?
     private var dashboardController: DashboardWindowController?
+    private var toastController: ToastWindowController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppLog.app.info("VoiceType launched.")
@@ -44,6 +45,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
 
         hudController = HUDWindowController(engine: engine, settingsStore: settingsStore)
+        toastController = ToastWindowController(learner: engine.learner)
 
         // Wire hotkeys → engine (tap-toggle + ESC to cancel).
         hotkeys.onToggle = { [weak self] mode in

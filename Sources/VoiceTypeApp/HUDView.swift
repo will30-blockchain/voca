@@ -12,8 +12,23 @@ struct HUDView: View {
     @ObservedObject var recorder: AudioRecorder
     var onCancel: () -> Void
     var onConfirm: () -> Void
+    var onRetry: () -> Void
 
     var body: some View {
+        // Two layouts: the "running" pill (cancel · waveform · confirm) and
+        // the "error" pill (dismiss · message · retry). Errors get a wider
+        // pill so the message reads cleanly.
+        Group {
+            if isError {
+                errorPill
+            } else {
+                runningPill
+            }
+        }
+        .padding(10)
+    }
+
+    private var runningPill: some View {
         HStack(spacing: DesignTokens.Space.sm) {
             cancelButton
             Waveform(recorder: recorder, color: accentColor, isLive: isRecording)
@@ -31,7 +46,61 @@ struct HUDView: View {
         )
         .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.pill, style: .continuous))
         .shadow(color: .black.opacity(0.12), radius: 20, x: 0, y: 6)
-        .padding(10)
+    }
+
+    private var errorPill: some View {
+        HStack(spacing: DesignTokens.Space.sm) {
+            HUDCircleButton(
+                systemImage: "xmark",
+                fill: DesignTokens.Color.surfaceSunken,
+                glyphColor: DesignTokens.Color.textSecondary,
+                action: onCancel
+            )
+            .help("Dismiss")
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Couldn't transcribe")
+                    .font(DesignTokens.Typography.captionEmphasis)
+                    .foregroundStyle(DesignTokens.Color.danger)
+                    .lineLimit(1)
+                Text(errorMessage)
+                    .font(DesignTokens.Typography.caption)
+                    .foregroundStyle(DesignTokens.Color.textSecondary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            if engine.canRetry {
+                Button(action: onRetry) {
+                    Label("Retry", systemImage: "arrow.clockwise")
+                        .font(DesignTokens.Typography.captionEmphasis)
+                        .padding(.horizontal, DesignTokens.Space.sm)
+                        .padding(.vertical, 5)
+                        .foregroundStyle(.white)
+                        .background(
+                            Capsule().fill(DesignTokens.Color.danger)
+                        )
+                }
+                .buttonStyle(.plain)
+                .help("Re-run transcription on the same recording")
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .frame(width: 400)
+        .background(errorPillBackground)
+        .overlay(
+            RoundedRectangle(cornerRadius: DesignTokens.Radius.pill, style: .continuous)
+                .strokeBorder(DesignTokens.Color.danger.opacity(0.35), lineWidth: 0.5)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.pill, style: .continuous))
+        .shadow(color: .black.opacity(0.12), radius: 20, x: 0, y: 6)
+    }
+
+    private var errorMessage: String {
+        if case .error(let m) = engine.state { return m }
+        return ""
     }
 
     // MARK: - Background
@@ -48,6 +117,25 @@ struct HUDView: View {
             RoundedRectangle(cornerRadius: DesignTokens.Radius.pill, style: .continuous)
                 .fill(accentTintColor.opacity(0.08))
         }
+    }
+
+    /// Error pill uses a softer warning tint instead of the recording accent
+    /// so the colour itself signals "something needs attention".
+    private var errorPillBackground: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: DesignTokens.Radius.pill, style: .continuous)
+                .fill(DesignTokens.Color.surface)
+            RoundedRectangle(cornerRadius: DesignTokens.Radius.pill, style: .continuous)
+                .fill(.ultraThinMaterial)
+                .opacity(0.6)
+            RoundedRectangle(cornerRadius: DesignTokens.Radius.pill, style: .continuous)
+                .fill(DesignTokens.Color.danger.opacity(0.06))
+        }
+    }
+
+    private var isError: Bool {
+        if case .error = engine.state { return true }
+        return false
     }
 
     // MARK: - State helpers

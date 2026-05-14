@@ -11,6 +11,12 @@ public enum EngineState: Sendable, Equatable {
     case recording(mode: DictationMode)
     case processing(mode: DictationMode, stage: String)
     case error(message: String)
+
+    /// True when the last pipeline ended in `.error` and a retry is available.
+    public var isRetryable: Bool {
+        if case .error = self { return true }
+        return false
+    }
 }
 
 @MainActor
@@ -20,12 +26,22 @@ public final class VoiceTypeEngine: ObservableObject {
     public let history: TranscriptHistory
     public let recorder: AudioRecorder
     public let log: LogStore
+    public let learner: CorrectionLearner
+
+    /// True when the engine has audio buffered from the previous take and
+    /// can re-run the pipeline without re-recording.
+    @Published public private(set) var canRetry: Bool = false
 
     private let settingsStore: SettingsStore
     private let memory: PersonalMemory
     private let dictionary: UserDictionary
     private let injector: TextInjector
     private let urlSession: URLSession
+
+    /// Last successfully-captured recording. Retained so the user can hit
+    /// "Retry" after a network blip — we don't need to re-record.
+    private var lastRecording: AudioRecorder.Recording?
+    private var lastMode: DictationMode = .transcribe
 
     public init(
         settingsStore: SettingsStore,
@@ -55,6 +71,7 @@ public final class VoiceTypeEngine: ObservableObject {
             self.urlSession = URLSession(configuration: config)
         }
         self.history = TranscriptHistory()
+        self.learner = CorrectionLearner(dictionary: dictionary, memory: memory, log: log)
     }
 
     /// Tap-toggle entry point. If idle, starts a recording in the given mode.
@@ -75,9 +92,17 @@ public final class VoiceTypeEngine: ObservableObject {
 
     public func beginRecording(mode: DictationMode) async {
         guard case .idle = state else { return }
+        // The user has clearly moved on from the previous paste — a great
+        // moment to scan that field for typo corrections to learn from.
+        if settingsStore.settings.learnFromCorrections {
+            learner.reviewPendingPaste()
+        }
         do {
             try await recorder.start()
             state = .recording(mode: mode)
+            // Starting a fresh recording invalidates the previous "retry" buffer.
+            lastRecording = nil
+            canRetry = false
             log.info(.engine, "Recording started", detail: ["mode": mode == .translate ? "translate" : "transcribe"])
         } catch {
             state = .error(message: error.localizedDescription)
@@ -90,28 +115,83 @@ public final class VoiceTypeEngine: ObservableObject {
 
     public func endRecording() async {
         guard case .recording(let mode) = state else { return }
-        let startedAt = Date()
         do {
-            state = .processing(mode: mode, stage: "Encoding…")
             let recording = try await recorder.stop()
-            let peakStr = String(format: "%.4f", recording.peakLevel)
-            let durStr = String(format: "%.2f", recording.duration)
-            log.info(.audio, "Recording captured",
-                     detail: ["duration_s": durStr, "peak": peakStr, "bytes": "\(recording.audio.count)"])
+            try await runPipeline(recording: recording, mode: mode)
+        } catch {
+            AppLog.engine.error("recorder stop failed: \(String(describing: error), privacy: .public)")
+            log.error(.audio, "Recorder stop failed", detail: ["error": error.localizedDescription])
+            state = .error(message: error.localizedDescription)
+            try? await Task.sleep(nanoseconds: 2_500_000_000)
+            if case .error = state { state = .idle }
+        }
+    }
 
-            if recording.audio.isEmpty || recording.duration < 0.25 {
-                state = .idle
-                log.info(.engine, "Take too short — ignored", detail: ["duration_s": durStr])
-                return
-            }
+    /// Re-runs the pipeline using the previously-captured audio — used by
+    /// the HUD's "Retry" button so the user doesn't have to speak again
+    /// after a transient API or network failure.
+    public func retryLastRecording() async {
+        guard let recording = lastRecording else {
+            log.warning(.engine, "Retry requested but no recording is buffered")
+            return
+        }
+        // Only retry from .error or .idle; ignore taps mid-recording / mid-processing.
+        switch state {
+        case .error, .idle: break
+        default: return
+        }
+        log.info(.engine, "Retrying last recording", detail: [
+            "duration_s": String(format: "%.2f", recording.duration)
+        ])
+        do {
+            try await runPipeline(recording: recording, mode: lastMode)
+        } catch {
+            log.error(.engine, "Retry failed", detail: ["error": error.localizedDescription])
+            state = .error(message: error.localizedDescription)
+            try? await Task.sleep(nanoseconds: 2_500_000_000)
+            if case .error = state { state = .idle }
+        }
+    }
 
-            // Skip the API call on completely silent recordings.
-            if recording.peakLevel < HallucinationFilter.silenceThreshold {
-                state = .idle
-                log.info(.filter, "Silent recording — skipped transcribe",
-                         detail: ["peak": peakStr, "threshold": "\(HallucinationFilter.silenceThreshold)"])
-                return
-            }
+    private func runPipeline(recording: AudioRecorder.Recording, mode: DictationMode) async throws {
+        let startedAt = Date()
+        let peakStr = String(format: "%.4f", recording.peakLevel)
+        let durStr = String(format: "%.2f", recording.duration)
+        log.info(.audio, "Recording captured",
+                 detail: ["duration_s": durStr, "peak": peakStr, "bytes": "\(recording.audio.count)"])
+
+        if recording.audio.isEmpty || recording.duration < 0.25 {
+            state = .idle
+            lastRecording = nil
+            canRetry = false
+            log.info(.engine, "Take too short — ignored", detail: ["duration_s": durStr])
+            return
+        }
+
+        // Skip the API call on completely silent recordings.
+        if recording.peakLevel < HallucinationFilter.silenceThreshold {
+            state = .idle
+            lastRecording = nil
+            canRetry = false
+            log.info(.filter, "Silent recording — skipped transcribe",
+                     detail: ["peak": peakStr, "threshold": "\(HallucinationFilter.silenceThreshold)"])
+            return
+        }
+
+        // Buffer the audio so the user can hit Retry on transient failures.
+        lastRecording = recording
+        lastMode = mode
+        canRetry = true
+
+        try await runRemoteStages(recording: recording, mode: mode, startedAt: startedAt)
+    }
+
+    private func runRemoteStages(
+        recording: AudioRecorder.Recording,
+        mode: DictationMode,
+        startedAt: Date
+    ) async throws {
+        do {
 
             state = .processing(mode: mode, stage: "Transcribing…")
             let sttProvider = settingsStore.settings.sttProvider.rawValue
@@ -157,6 +237,11 @@ public final class VoiceTypeEngine: ObservableObject {
             log.info(.inject, "Injected text",
                      detail: ["chars": "\(finalText.count)", "method": settingsStore.settings.injectionMethod.rawValue])
 
+            // Capture the focused text element NOW so we can re-read it on
+            // the next dictation and learn from any typo corrections.
+            if settingsStore.settings.learnFromCorrections {
+                learner.recordPaste(finalText)
+            }
             if settingsStore.settings.learningEnabled {
                 memory.ingest(transcript: finalText)
             }
@@ -165,6 +250,9 @@ public final class VoiceTypeEngine: ObservableObject {
             let total = String(format: "%.2f", Date().timeIntervalSince(startedAt))
             log.info(.engine, "Pipeline complete", detail: ["total_s": total])
 
+            // Successful pipeline → no point keeping the audio buffer.
+            lastRecording = nil
+            canRetry = false
             state = .idle
         } catch {
             AppLog.engine.error("pipeline failed: \(String(describing: error), privacy: .public)")
@@ -173,17 +261,33 @@ public final class VoiceTypeEngine: ObservableObject {
                         "error": error.localizedDescription,
                         "type": String(describing: type(of: error))
                       ])
+            // Keep `lastRecording` populated so the HUD's Retry button still
+            // works — the audio is fine, only the remote stages failed.
             state = .error(message: error.localizedDescription)
-            try? await Task.sleep(nanoseconds: 2_500_000_000)
-            state = .idle
+            try? await Task.sleep(nanoseconds: 6_000_000_000)
+            if case .error = state {
+                // If the user didn't tap Retry within the window, clear.
+                state = .idle
+            }
         }
     }
 
     public func cancelRecording() async {
-        if case .recording = state {
+        switch state {
+        case .recording:
             _ = try? await recorder.stop()
+            lastRecording = nil
+            canRetry = false
             state = .idle
             log.info(.engine, "Recording cancelled")
+        case .error:
+            // User dismissed the error — clear retry buffer too.
+            lastRecording = nil
+            canRetry = false
+            state = .idle
+            log.info(.engine, "Error dismissed")
+        default:
+            break
         }
     }
 

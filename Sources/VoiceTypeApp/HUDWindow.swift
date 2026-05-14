@@ -14,7 +14,7 @@ final class HUDWindowController {
         self.engine = engine
         self.settingsStore = settingsStore
 
-        let rect = NSRect(x: 0, y: 0, width: 360, height: 60)
+        let rect = NSRect(x: 0, y: 0, width: 420, height: 72)
         let panel = NSPanel(
             contentRect: rect,
             styleMask: [.borderless, .nonactivatingPanel],
@@ -40,7 +40,8 @@ final class HUDWindowController {
             engine: engine,
             recorder: engine.recorder,
             onCancel: { Task { await engine.cancelRecording() } },
-            onConfirm: { Task { await engine.endRecording() } }
+            onConfirm: { Task { await engine.endRecording() } },
+            onRetry: { Task { await engine.retryLastRecording() } }
         ))
         host.frame = rect
         panel.contentView = host

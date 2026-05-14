@@ -70,6 +70,12 @@ struct GeneralSettingsView: View {
                 )
                 Divider().background(DesignTokens.Color.borderSubtle)
                 ToggleRow(
+                    title: "Learn from corrections",
+                    hint: "When you fix a typo right after dictation, VoiceType notices and adds the new word (proper nouns, acronyms, names) to your Dictionary automatically.",
+                    isOn: bind(\.learnFromCorrections)
+                )
+                Divider().background(DesignTokens.Color.borderSubtle)
+                ToggleRow(
                     title: "Play subtle sounds",
                     hint: "A soft tone on start and stop. Off if you record over calls.",
                     isOn: bind(\.playSounds)

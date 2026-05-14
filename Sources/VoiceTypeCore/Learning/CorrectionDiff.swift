@@ -1,0 +1,173 @@
+import Foundation
+
+/// Pure logic for "what did the user change after we pasted?" — used by
+/// CorrectionLearner to extract proper-noun-like edits and add them to
+/// the dictionary. No I/O, no isolation; trivially testable.
+public enum CorrectionDiff {
+    public struct Report: Sendable, Equatable {
+        public let candidates: [String]
+        public let overlap: Double
+        public init(candidates: [String], overlap: Double) {
+            self.candidates = candidates
+            self.overlap = overlap
+        }
+    }
+
+    /// Finds proper-noun-like tokens present in `currentText` but not in
+    /// `originalPaste`. Returns an empty list when:
+    ///   - the LCS overlap is too low (the user likely focused a different
+    ///     field, so a diff would be garbage), or
+    ///   - the candidate list explodes past `maxAdds` (defensive cap), or
+    ///   - the user simply didn't edit.
+    public static func newCandidates(
+        originalPaste: String,
+        currentText: String,
+        existingDictionary: Set<String>,
+        existingMemory: Set<String> = [],
+        maxAdds: Int = 8
+    ) -> Report {
+        let original = tokenize(originalPaste)
+        let current = tokenize(currentText)
+
+        guard !original.isEmpty else { return Report(candidates: [], overlap: 0) }
+        guard !current.isEmpty else { return Report(candidates: [], overlap: 0) }
+
+        let (lcsLen, added) = lcsDiff(original, current)
+        let overlap = Double(lcsLen) / Double(original.count)
+
+        // Below 0.4 the diff is unreliable — likely the user clicked into a
+        // completely different field between paste and the time we read.
+        guard overlap >= 0.4 else {
+            return Report(candidates: [], overlap: overlap)
+        }
+
+        let dictLowercased = Set(existingDictionary.map { $0.lowercased() })
+        let memLowercased = Set(existingMemory.map { $0.lowercased() })
+
+        var seen = Set<String>()
+        var result: [String] = []
+        for token in added {
+            guard result.count < maxAdds else { break }
+            let key = token.lowercased()
+            if seen.contains(key) { continue }
+            guard isCandidateTerm(token, existingDict: dictLowercased, existingMemory: memLowercased) else { continue }
+            seen.insert(key)
+            result.append(token)
+        }
+
+        // If we'd add a *ton* of things, the diff is suspect — drop everything.
+        if result.count >= maxAdds {
+            return Report(candidates: [], overlap: overlap)
+        }
+        return Report(candidates: result, overlap: overlap)
+    }
+
+    // MARK: - Tokenisation
+
+    static func tokenize(_ text: String) -> [String] {
+        var tokens: [String] = []
+        var current = ""
+        for scalar in text.unicodeScalars {
+            if isWordScalar(scalar) {
+                current.unicodeScalars.append(scalar)
+            } else {
+                if !current.isEmpty { tokens.append(current); current.removeAll() }
+            }
+        }
+        if !current.isEmpty { tokens.append(current) }
+        return tokens
+    }
+
+    private static func isWordScalar(_ s: Unicode.Scalar) -> Bool {
+        // Letters, numbers, and word-internal punctuation (apostrophe, hyphen,
+        // underscore). CJK scalars are letters per Unicode.
+        if let charScalar = Character(s).unicodeScalars.first,
+           Character(charScalar).isLetter || Character(charScalar).isNumber {
+            return true
+        }
+        switch s.value {
+        case 0x27, 0x2D, 0x5F: return true // ' - _
+        default: return false
+        }
+    }
+
+    // MARK: - LCS diff
+
+    /// Returns (LCS length, tokens added in `b` relative to `a`). Case-insensitive
+    /// comparison so "Claude" matches "claude" in the original.
+    static func lcsDiff(_ a: [String], _ b: [String]) -> (lcsLength: Int, adds: [String]) {
+        let m = a.count, n = b.count
+        if m == 0 { return (0, b) }
+        if n == 0 { return (0, []) }
+
+        var dp = Array(repeating: Array(repeating: 0, count: n + 1), count: m + 1)
+        for i in 1...m {
+            for j in 1...n {
+                if a[i - 1].caseInsensitiveCompare(b[j - 1]) == .orderedSame {
+                    dp[i][j] = dp[i - 1][j - 1] + 1
+                } else {
+                    dp[i][j] = max(dp[i - 1][j], dp[i][j - 1])
+                }
+            }
+        }
+
+        var i = m, j = n
+        var adds: [String] = []
+        while i > 0 || j > 0 {
+            if i > 0 && j > 0 && a[i - 1].caseInsensitiveCompare(b[j - 1]) == .orderedSame {
+                i -= 1; j -= 1
+            } else if j > 0 && (i == 0 || dp[i][j - 1] >= dp[i - 1][j]) {
+                adds.append(b[j - 1])
+                j -= 1
+            } else {
+                i -= 1
+            }
+        }
+        return (dp[m][n], adds.reversed())
+    }
+
+    // MARK: - Filter
+
+    private static let stopwords: Set<String> = [
+        "the", "and", "but", "for", "with", "this", "that", "have", "from",
+        "they", "will", "would", "could", "should", "their", "there", "what",
+        "when", "where", "your", "yours", "mine", "ours", "his", "hers",
+        "its", "into", "than", "then", "them", "these", "those", "some",
+        "such", "also", "about", "after", "before", "because", "while"
+    ]
+
+    static func isCandidateTerm(_ token: String, existingDict: Set<String>, existingMemory: Set<String>) -> Bool {
+        guard token.count >= 3 else { return false }
+        let lower = token.lowercased()
+        if existingDict.contains(lower) || existingMemory.contains(lower) { return false }
+        if stopwords.contains(lower) { return false }
+
+        if containsCJK(token) { return true }
+
+        // Acronym: 2+ letters all uppercase (or with digits) — MLX, NASA, GPT4.
+        let letters = token.filter { $0.isLetter }
+        if letters.count >= 2 && letters.allSatisfy({ $0.isUppercase }) {
+            return true
+        }
+
+        // Mixed-case internal: contains an uppercase letter past index 0
+        // (Anthropic, MyApp, OpenAI). This excludes sentence-start words.
+        if token.dropFirst().contains(where: { $0.isUppercase }) {
+            return true
+        }
+
+        return false
+    }
+
+    private static func containsCJK(_ token: String) -> Bool {
+        for scalar in token.unicodeScalars {
+            let v = scalar.value
+            if (0x4E00...0x9FFF).contains(v) ||
+               (0x3040...0x30FF).contains(v) ||
+               (0xAC00...0xD7AF).contains(v) {
+                return true
+            }
+        }
+        return false
+    }
+}
