@@ -59,15 +59,10 @@ final class ToastWindowController {
     private func handle(term: CorrectionLearner.LearnedTerm?) {
         dismissTask?.cancel()
         guard term != nil else {
-            fadeOut()
+            slideOut()
             return
         }
-        placeTopRight()
-        window.orderFrontRegardless()
-        NSAnimationContext.runAnimationGroup { ctx in
-            ctx.duration = 0.18
-            window.animator().alphaValue = 1
-        }
+        slideIn()
         // Auto-dismiss after 5 seconds.
         dismissTask = Task { [weak self] in
             try? await Task.sleep(nanoseconds: 5_000_000_000)
@@ -78,25 +73,50 @@ final class ToastWindowController {
         }
     }
 
-    private func fadeOut() {
+    /// Slide in from above the resting position while fading 0 → 1.
+    private func slideIn() {
+        let target = restingOrigin()
+        let startOrigin = NSPoint(x: target.x, y: target.y + 18)
+
+        window.alphaValue = 0
+        var startFrame = window.frame
+        startFrame.origin = startOrigin
+        window.setFrame(startFrame, display: false)
+        window.orderFrontRegardless()
+
+        NSAnimationContext.runAnimationGroup { ctx in
+            ctx.duration = 0.28
+            ctx.timingFunction = CAMediaTimingFunction(controlPoints: 0.22, 0.85, 0.32, 1.02)
+            window.animator().alphaValue = 1
+            var endFrame = window.frame
+            endFrame.origin = target
+            window.animator().setFrame(endFrame, display: true)
+        }
+    }
+
+    private func slideOut() {
+        let endY = window.frame.origin.y + 14
         NSAnimationContext.runAnimationGroup({ ctx in
-            ctx.duration = 0.18
+            ctx.duration = 0.22
+            ctx.timingFunction = CAMediaTimingFunction(name: .easeIn)
             window.animator().alphaValue = 0
+            var endFrame = window.frame
+            endFrame.origin.y = endY
+            window.animator().setFrame(endFrame, display: true)
         }, completionHandler: { [weak self] in
             self?.window.orderOut(nil)
         })
     }
 
-    private func placeTopRight() {
+    private func restingOrigin() -> NSPoint {
         let screen = NSScreen.main ?? NSScreen.screens.first
-        guard let screen else { return }
+        guard let screen else { return .zero }
         let visible = screen.visibleFrame
         let size = window.frame.size
-        let origin = NSPoint(
+        return NSPoint(
             x: visible.maxX - size.width - 16,
             y: visible.maxY - size.height - 16
         )
-        window.setFrameOrigin(origin)
     }
 }
 
@@ -106,26 +126,31 @@ private struct ToastView: View {
     let onDismiss: () -> Void
 
     var body: some View {
-        HStack(alignment: .top, spacing: DesignTokens.Space.md) {
+        HStack(alignment: .center, spacing: DesignTokens.Space.md) {
             Image(systemName: "sparkles")
-                .font(.system(size: 16, weight: .semibold))
+                .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(DesignTokens.Color.accent)
-                .frame(width: 28, height: 28)
+                .frame(width: 30, height: 30)
                 .background(Circle().fill(DesignTokens.Color.accentTint))
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Added to dictionary")
-                    .font(DesignTokens.Typography.captionEmphasis)
-                    .foregroundStyle(DesignTokens.Color.textSecondary)
+            VStack(alignment: .leading, spacing: 3) {
+                // Term first — it's the thing the user actually cares about
+                // and reads as a headline. "added to dictionary" is the soft
+                // explanation underneath.
                 Text(learner.latest?.term ?? "")
                     .font(DesignTokens.Typography.bodyEmphasis)
                     .foregroundStyle(DesignTokens.Color.textPrimary)
                     .lineLimit(1)
-                Button("Undo", action: onUndo)
-                    .buttonStyle(.plain)
-                    .font(DesignTokens.Typography.caption)
-                    .foregroundStyle(DesignTokens.Color.accent)
-                    .padding(.top, 2)
+                    .truncationMode(.tail)
+                HStack(spacing: 8) {
+                    Text("added to dictionary")
+                        .font(DesignTokens.Typography.caption)
+                        .foregroundStyle(DesignTokens.Color.textSecondary)
+                    Button("Undo", action: onUndo)
+                        .buttonStyle(.plain)
+                        .font(DesignTokens.Typography.captionEmphasis)
+                        .foregroundStyle(DesignTokens.Color.accent)
+                }
             }
             Spacer(minLength: 0)
             Button(action: onDismiss) {
@@ -136,6 +161,7 @@ private struct ToastView: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .help("Dismiss")
         }
         .padding(.horizontal, DesignTokens.Space.md)
         .padding(.vertical, DesignTokens.Space.sm)

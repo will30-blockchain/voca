@@ -63,36 +63,81 @@ final class HUDWindowController {
         }
         switch state {
         case .idle:
-            fadeOut()
+            slideOut()
         default:
-            placeNearMouse()
-            window.alphaValue = 0
-            window.orderFrontRegardless()
-            NSAnimationContext.runAnimationGroup { ctx in
-                ctx.duration = 0.15
-                window.animator().alphaValue = 1.0
+            let alreadyVisible = window.isVisible && window.alphaValue > 0.1
+            if alreadyVisible {
+                // The pill is changing layout (e.g. running → error). Just
+                // reposition smoothly without a fresh slide-in.
+                reposition(animated: true)
+            } else {
+                slideIn()
             }
         }
     }
 
-    private func fadeOut() {
+    /// Animates the pill in from ~20 pt below the final resting spot while
+    /// fading alpha 0 → 1. Easing is a slight overshoot so it feels alive,
+    /// not mechanical.
+    private func slideIn() {
+        let target = restingOrigin()
+        let startOrigin = NSPoint(x: target.x, y: target.y - 20)
+
+        window.alphaValue = 0
+        var startFrame = window.frame
+        startFrame.origin = startOrigin
+        window.setFrame(startFrame, display: false)
+        window.orderFrontRegardless()
+
+        NSAnimationContext.runAnimationGroup { ctx in
+            ctx.duration = 0.30
+            ctx.timingFunction = CAMediaTimingFunction(controlPoints: 0.22, 0.85, 0.32, 1.02)
+            window.animator().alphaValue = 1.0
+            var endFrame = window.frame
+            endFrame.origin = target
+            window.animator().setFrame(endFrame, display: true)
+        }
+    }
+
+    /// Inverse of slideIn — fade + slide down a few points and orderOut.
+    private func slideOut() {
+        let endY = window.frame.origin.y - 14
         NSAnimationContext.runAnimationGroup({ ctx in
-            ctx.duration = 0.18
+            ctx.duration = 0.22
+            ctx.timingFunction = CAMediaTimingFunction(name: .easeIn)
             window.animator().alphaValue = 0
+            var endFrame = window.frame
+            endFrame.origin.y = endY
+            window.animator().setFrame(endFrame, display: true)
         }, completionHandler: { [weak self] in
             self?.window.orderOut(nil)
         })
     }
 
-    private func placeNearMouse() {
+    /// Used when the pill is already visible but needs to adapt its size or
+    /// position (e.g. running pill 360 pt wide → error pill 420 pt wide).
+    private func reposition(animated: Bool) {
+        let target = restingOrigin()
+        var endFrame = window.frame
+        endFrame.origin = target
+        if animated {
+            NSAnimationContext.runAnimationGroup { ctx in
+                ctx.duration = 0.18
+                window.animator().setFrame(endFrame, display: true)
+            }
+        } else {
+            window.setFrame(endFrame, display: true)
+        }
+    }
+
+    private func restingOrigin() -> NSPoint {
         let screen = NSScreen.main ?? NSScreen.screens.first
-        guard let screen else { return }
+        guard let screen else { return .zero }
         let frame = screen.visibleFrame
         let size = window.frame.size
-        let origin = NSPoint(
+        return NSPoint(
             x: frame.midX - size.width / 2,
             y: frame.minY + 60
         )
-        window.setFrameOrigin(origin)
     }
 }

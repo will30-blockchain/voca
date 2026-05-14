@@ -27,6 +27,7 @@ public final class VoiceTypeEngine: ObservableObject {
     public let recorder: AudioRecorder
     public let log: LogStore
     public let learner: CorrectionLearner
+    public let sounds: SoundPlayer
 
     /// True when the engine has audio buffered from the previous take and
     /// can re-run the pipeline without re-recording.
@@ -72,6 +73,7 @@ public final class VoiceTypeEngine: ObservableObject {
         }
         self.history = TranscriptHistory()
         self.learner = CorrectionLearner(dictionary: dictionary, memory: memory, log: log)
+        self.sounds = SoundPlayer()
     }
 
     /// Tap-toggle entry point. If idle, starts a recording in the given mode.
@@ -104,6 +106,9 @@ public final class VoiceTypeEngine: ObservableObject {
             lastRecording = nil
             canRetry = false
             log.info(.engine, "Recording started", detail: ["mode": mode == .translate ? "translate" : "transcribe"])
+            if settingsStore.settings.playSounds {
+                sounds.playStart()
+            }
         } catch {
             state = .error(message: error.localizedDescription)
             AppLog.engine.error("recorder.start failed: \(String(describing: error), privacy: .public)")
@@ -117,6 +122,9 @@ public final class VoiceTypeEngine: ObservableObject {
         guard case .recording(let mode) = state else { return }
         do {
             let recording = try await recorder.stop()
+            if settingsStore.settings.playSounds {
+                sounds.playStop()
+            }
             try await runPipeline(recording: recording, mode: mode)
         } catch {
             AppLog.engine.error("recorder stop failed: \(String(describing: error), privacy: .public)")
