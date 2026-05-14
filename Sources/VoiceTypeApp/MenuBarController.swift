@@ -107,7 +107,7 @@ final class MenuBarController {
         switch state {
         case .idle: return "VoiceType — ready"
         case .recording(let mode): return mode == .translate ? "Translating…" : "Listening…"
-        case .processing(_, let stage): return stage
+        case .processing(_, let stage): return stage.label
         case .error(let m): return "Error: \(m)"
         }
     }

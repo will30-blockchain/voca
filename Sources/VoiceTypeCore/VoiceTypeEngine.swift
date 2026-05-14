@@ -6,10 +6,37 @@ public enum DictationMode: Sendable, Equatable {
     case translate
 }
 
+public enum ProcessingStage: String, Sendable, Equatable, CaseIterable {
+    case encoding, transcribing, refining, translating, injecting
+
+    public var label: String {
+        switch self {
+        case .encoding:     return "Encoding…"
+        case .transcribing: return "Transcribing…"
+        case .refining:     return "Refining…"
+        case .translating:  return "Translating…"
+        case .injecting:    return "Injecting…"
+        }
+    }
+
+    /// Fraction of the pipeline that has nominally completed once this stage
+    /// is reached. Tuned so the bar visibly advances at each step rather than
+    /// holding still — STT dominates the wall time so it spans the widest band.
+    public var progress: Double {
+        switch self {
+        case .encoding:     return 0.08
+        case .transcribing: return 0.45
+        case .refining:     return 0.85
+        case .translating:  return 0.85
+        case .injecting:    return 0.97
+        }
+    }
+}
+
 public enum EngineState: Sendable, Equatable {
     case idle
     case recording(mode: DictationMode)
-    case processing(mode: DictationMode, stage: String)
+    case processing(mode: DictationMode, stage: ProcessingStage)
     case error(message: String)
 
     /// True when the last pipeline ended in `.error` and a retry is available.
@@ -201,7 +228,7 @@ public final class VoiceTypeEngine: ObservableObject {
     ) async throws {
         do {
 
-            state = .processing(mode: mode, stage: "Transcribing…")
+            state = .processing(mode: mode, stage: .transcribing)
             let sttProvider = settingsStore.settings.sttProvider.rawValue
             let sttModel = settingsStore.settings.sttModel
             let sttStart = Date()
@@ -225,7 +252,7 @@ public final class VoiceTypeEngine: ObservableObject {
                 break
             }
 
-            state = .processing(mode: mode, stage: mode == .translate ? "Translating…" : "Refining…")
+            state = .processing(mode: mode, stage: mode == .translate ? .translating : .refining)
             let llmProvider = settingsStore.settings.llmProvider.rawValue
             let llmModel = settingsStore.settings.llmModel
             let llmStart = Date()
@@ -240,7 +267,7 @@ public final class VoiceTypeEngine: ObservableObject {
                          ])
             }
 
-            state = .processing(mode: mode, stage: "Injecting…")
+            state = .processing(mode: mode, stage: .injecting)
             try await injector.inject(finalText, method: settingsStore.settings.injectionMethod)
             log.info(.inject, "Injected text",
                      detail: ["chars": "\(finalText.count)", "method": settingsStore.settings.injectionMethod.rawValue])

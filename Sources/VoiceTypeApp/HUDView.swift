@@ -31,9 +31,15 @@ struct HUDView: View {
     private var runningPill: some View {
         HStack(spacing: DesignTokens.Space.sm) {
             cancelButton
-            Waveform(recorder: recorder, color: accentColor, isLive: isRecording)
-                .frame(height: 28)
-                .frame(maxWidth: .infinity)
+            Group {
+                if let stage = processingStage {
+                    HUDProgress(stage: stage, tint: accentColor)
+                } else {
+                    Waveform(recorder: recorder, color: accentColor, isLive: isRecording)
+                        .frame(height: 28)
+                }
+            }
+            .frame(maxWidth: .infinity)
             confirmButton
         }
         .padding(.horizontal, 10)
@@ -46,6 +52,11 @@ struct HUDView: View {
         )
         .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.pill, style: .continuous))
         .shadow(color: .black.opacity(0.12), radius: 20, x: 0, y: 6)
+    }
+
+    private var processingStage: ProcessingStage? {
+        if case .processing(_, let stage) = engine.state { return stage }
+        return nil
     }
 
     private var errorPill: some View {
@@ -215,6 +226,33 @@ struct HUDView: View {
 
 /// Solid-circle button used for both cancel and confirm. No stroke ring —
 /// the pill itself owns the only border in this composition.
+/// Compact progress bar shown inside the HUD pill during pipeline stages —
+/// fills the same horizontal slot the waveform occupies while recording.
+private struct HUDProgress: View {
+    let stage: ProcessingStage
+    let tint: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    Capsule(style: .continuous)
+                        .fill(DesignTokens.Color.surfaceSunken)
+                    Capsule(style: .continuous)
+                        .fill(tint)
+                        .frame(width: proxy.size.width * CGFloat(stage.progress))
+                        .animation(.easeOut(duration: 0.35), value: stage)
+                }
+            }
+            .frame(height: 4)
+            Text(stage.label)
+                .font(DesignTokens.Typography.caption)
+                .foregroundStyle(DesignTokens.Color.textSecondary)
+                .lineLimit(1)
+        }
+    }
+}
+
 private struct HUDCircleButton: View {
     let systemImage: String
     let fill: Color

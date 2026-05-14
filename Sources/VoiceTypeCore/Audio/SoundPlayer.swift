@@ -11,8 +11,13 @@ import AppKit
 public final class SoundPlayer {
     public init() {}
 
+    /// Both start and stop use the same gentle "Glass" chime — the HUD
+    /// fade-in / fade-out gives enough visual difference and the same audio
+    /// cue is calmer than picking a different "click" for the start. The
+    /// original "Tink" start was deemed too similar to macOS's IME-failure
+    /// sound by the user, so we settled on Glass for both.
     public func playStart() {
-        play("Tink", volume: 0.4)
+        play("Glass", volume: 0.35)
     }
 
     public func playStop() {

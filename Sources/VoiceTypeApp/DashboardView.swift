@@ -165,6 +165,8 @@ struct DashboardView: View {
                 if engineIsRecording {
                     Waveform(recorder: engine.recorder, color: indicatorColor, isLive: true)
                         .frame(height: 36)
+                } else if let stage = engineProcessingStage {
+                    PipelineProgress(stage: stage, tint: indicatorColor)
                 }
             }
         }
@@ -220,6 +222,11 @@ struct DashboardView: View {
         return false
     }
 
+    private var engineProcessingStage: ProcessingStage? {
+        if case .processing(_, let stage) = engine.state { return stage }
+        return nil
+    }
+
     private var statusIndicator: some View {
         ZStack {
             Circle()
@@ -245,7 +252,7 @@ struct DashboardView: View {
         case .idle: return "Ready"
         case .recording(.transcribe): return "Listening"
         case .recording(.translate): return "Listening · Translate"
-        case .processing(_, let stage): return stage
+        case .processing(_, let stage): return stage.label
         case .error: return "Error"
         }
     }
@@ -268,27 +275,27 @@ struct DashboardView: View {
     // MARK: - Hotkeys
 
     private var hotkeyCard: some View {
-        Card {
-            VStack(alignment: .leading, spacing: DesignTokens.Space.md) {
-                SectionTitle("Hotkeys")
-                VStack(spacing: DesignTokens.Space.md) {
-                    HotkeyRow(
-                        title: "Dictate",
-                        keys: ["Right Option"],
-                        description: "Tap once to start, tap again to stop and paste.",
-                        tint: DesignTokens.Color.recording
-                    )
-                    HotkeyRow(
-                        title: "Translate",
-                        keys: ["Right Option", "Right Shift"],
-                        description: "Hold Right Shift while tapping Right Option to start translation. Tap Right Option again to stop.",
-                        tint: DesignTokens.Color.translate
-                    )
-                }
-                Text("Right Option held continuously (longer than 0.5 s) still works for accent input — Option+E for é, etc.")
-                    .font(DesignTokens.Typography.caption)
-                    .vtTertiaryText()
+        VStack(alignment: .leading, spacing: DesignTokens.Space.md) {
+            SectionTitle("Hotkeys")
+            HStack(alignment: .top, spacing: DesignTokens.Space.md) {
+                HotkeyCard(
+                    icon: "waveform",
+                    title: "Dictate",
+                    keys: ["Right Option"],
+                    description: "Tap once to start, tap again to stop and paste.",
+                    tint: DesignTokens.Color.recording
+                )
+                HotkeyCard(
+                    icon: "character.bubble",
+                    title: "Translate",
+                    keys: ["Right Option", "Right Shift"],
+                    description: "Hold Right Shift while tapping Right Option. Tap Right Option again to stop.",
+                    tint: DesignTokens.Color.translate
+                )
             }
+            Text("Right Option held continuously (longer than 0.5 s) still works for accent input — Option+E for é, etc.")
+                .font(DesignTokens.Typography.caption)
+                .vtTertiaryText()
         }
     }
 
@@ -374,40 +381,106 @@ struct DashboardView: View {
 
 // MARK: - Subcomponents
 
-private struct HotkeyRow: View {
+/// Hotkey card — big icon on top, mode title, key combo chips, then a
+/// one-line description. Two of these sit side-by-side so the user sees
+/// the two modes as visually-distinct first-class actions.
+private struct HotkeyCard: View {
+    let icon: String
     let title: String
     let keys: [String]
     let description: String
     let tint: Color
 
     var body: some View {
-        HStack(alignment: .top, spacing: DesignTokens.Space.md) {
-            Circle().fill(tint).frame(width: 8, height: 8).padding(.top, 7)
-            VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: DesignTokens.Space.md) {
+            Image(systemName: icon)
+                .font(.system(size: 22, weight: .medium))
+                .foregroundStyle(tint)
+                .frame(width: 44, height: 44)
+                .background(Circle().fill(tint.opacity(0.12)))
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text(title)
+                    .font(DesignTokens.Typography.title2)
+                    .vtPrimaryText()
                 HStack(spacing: 6) {
-                    Text(title)
-                        .font(DesignTokens.Typography.bodyEmphasis)
-                        .vtPrimaryText()
-                    ForEach(keys, id: \.self) { k in
-                        Text(k)
+                    ForEach(Array(keys.enumerated()), id: \.offset) { index, key in
+                        if index > 0 {
+                            Text("+")
+                                .font(DesignTokens.Typography.caption)
+                                .vtTertiaryText()
+                        }
+                        Text(key)
                             .font(DesignTokens.Typography.mono)
                             .vtPrimaryText()
-                            .padding(.horizontal, 8).padding(.vertical, 3)
+                            .padding(.horizontal, 7).padding(.vertical, 2)
                             .background(
-                                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                RoundedRectangle(cornerRadius: 5, style: .continuous)
                                     .fill(DesignTokens.Color.surfaceSunken)
                             )
                             .overlay(
-                                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                RoundedRectangle(cornerRadius: 5, style: .continuous)
                                     .stroke(DesignTokens.Color.borderSubtle, lineWidth: 0.5)
                             )
                     }
                 }
-                Text(description)
-                    .font(DesignTokens.Typography.body)
-                    .vtSecondaryText()
             }
+
+            Text(description)
+                .font(DesignTokens.Typography.body)
+                .vtSecondaryText()
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, minHeight: 168, alignment: .topLeading)
+        .padding(DesignTokens.Space.lg)
+        .background(
+            RoundedRectangle(cornerRadius: DesignTokens.Radius.md, style: .continuous)
+                .fill(DesignTokens.Color.surfaceElevated)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: DesignTokens.Radius.md, style: .continuous)
+                .stroke(DesignTokens.Color.border, lineWidth: 0.5)
+        )
+        .shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 2)
+    }
+}
+
+/// Determinate progress bar shown during the .processing pipeline. Each
+/// pipeline stage maps to a known fraction (see ProcessingStage.progress)
+/// so the user gets a sense of where they are in the round-trip.
+struct PipelineProgress: View {
+    let stage: ProcessingStage
+    let tint: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 3, style: .continuous)
+                        .fill(DesignTokens.Color.surfaceSunken)
+                    RoundedRectangle(cornerRadius: 3, style: .continuous)
+                        .fill(tint)
+                        .frame(width: proxy.size.width * CGFloat(stage.progress))
+                        .animation(.easeOut(duration: 0.4), value: stage)
+                }
+            }
+            .frame(height: 6)
+            HStack(spacing: 6) {
+                ProgressView()
+                    .controlSize(.small)
+                    .scaleEffect(0.7)
+                    .frame(width: 12, height: 12)
+                Text(stage.label)
+                    .font(DesignTokens.Typography.caption)
+                    .vtSecondaryText()
+                Spacer()
+                Text("\(Int(stage.progress * 100))%")
+                    .font(DesignTokens.Typography.captionEmphasis)
+                    .vtTertiaryText()
+                    .monospacedDigit()
+            }
         }
     }
 }
