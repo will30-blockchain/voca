@@ -443,7 +443,6 @@ private struct HotkeyCard: View {
             RoundedRectangle(cornerRadius: DesignTokens.Radius.md, style: .continuous)
                 .stroke(DesignTokens.Color.border, lineWidth: 0.5)
         )
-        .shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 2)
     }
 }
 

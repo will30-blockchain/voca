@@ -88,7 +88,9 @@ enum DesignTokens {
 
 // MARK: - Reusable surfaces
 
-/// Standard card container — SC glass-card recipe adapted for light surfaces.
+/// Standard card container — flat white surface with a single hairline
+/// border. No shadow: the user explicitly asked for a "no AI" look — flat
+/// surfaces, no lift, no glow.
 struct Card<Content: View>: View {
     let content: Content
     var padding: CGFloat = DesignTokens.Space.lg
@@ -108,7 +110,6 @@ struct Card<Content: View>: View {
                 RoundedRectangle(cornerRadius: DesignTokens.Radius.md, style: .continuous)
                     .stroke(DesignTokens.Color.border, lineWidth: 0.5)
             )
-            .shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 2)
     }
 }
 
