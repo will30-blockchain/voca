@@ -245,8 +245,10 @@ public final class VOCAEngine: ObservableObject {
             switch HallucinationFilter.decide(transcript: raw.text, peakLevel: recording.peakLevel) {
             case .drop(let reason):
                 state = .idle
+                // Never persist dropped transcript text — could contain
+                // personal speech and would land in world-readable log.jsonl.
                 log.info(.filter, "Transcript dropped",
-                         detail: ["reason": reason, "text": String(raw.text.prefix(120))])
+                         detail: ["reason": reason, "chars": "\(raw.text.count)"])
                 return
             case .keep:
                 break

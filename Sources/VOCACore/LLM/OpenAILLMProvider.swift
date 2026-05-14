@@ -19,6 +19,7 @@ public struct OpenAILLMProvider: LLMProvider {
 
     public func complete(_ request: LLMRequest, model: String) async throws -> LLMResult {
         guard !apiKey.isEmpty else { throw LLMError.missingAPIKey(provider: "OpenAI") }
+        try EndpointValidator.validate(endpoint)
         return try await OpenAICompatibleClient.chat(
             endpoint: endpoint,
             apiKey: apiKey,

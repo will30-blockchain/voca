@@ -93,22 +93,47 @@ public enum LLMProviderID: String, Codable, CaseIterable, Sendable {
     }
 }
 
-public struct ProviderCredentials: Codable, Sendable, Equatable {
-    public var groqAPIKey: String
-    public var openaiAPIKey: String
-    public var anthropicAPIKey: String
-    public var deepgramAPIKey: String
+/// API keys live in the macOS Keychain (com.voca.api-key.* / account
+/// "default"). This struct is the in-memory façade — the JSON settings
+/// file never contains key material. Reads/writes hit Keychain
+/// transparently so existing call sites can keep using the same
+/// `.groqAPIKey` / `.openaiAPIKey` accessors.
+public struct ProviderCredentials: Sendable, Equatable {
+    public var groqAPIKey: String {
+        get { Keychain.read(.groq) }
+        nonmutating set { Keychain.write(.groq, value: newValue) }
+    }
+    public var openaiAPIKey: String {
+        get { Keychain.read(.openai) }
+        nonmutating set { Keychain.write(.openai, value: newValue) }
+    }
+    public var anthropicAPIKey: String {
+        get { Keychain.read(.anthropic) }
+        nonmutating set { Keychain.write(.anthropic, value: newValue) }
+    }
+    public var deepgramAPIKey: String {
+        get { Keychain.read(.deepgram) }
+        nonmutating set { Keychain.write(.deepgram, value: newValue) }
+    }
 
-    public init(
-        groqAPIKey: String = "",
-        openaiAPIKey: String = "",
-        anthropicAPIKey: String = "",
-        deepgramAPIKey: String = ""
-    ) {
-        self.groqAPIKey = groqAPIKey
-        self.openaiAPIKey = openaiAPIKey
-        self.anthropicAPIKey = anthropicAPIKey
-        self.deepgramAPIKey = deepgramAPIKey
+    public init() {}
+
+    public static func == (lhs: ProviderCredentials, rhs: ProviderCredentials) -> Bool {
+        // Equatable for SwiftUI binding plumbing. Comparing keys would
+        // round-trip into the Keychain on every diff and yield no useful
+        // signal — treat all credential instances as interchangeable.
+        return true
+    }
+}
+
+extension ProviderCredentials: Codable {
+    // JSON-encode as an empty object so old settings files round-trip
+    // without exposing key fields. Reads ignore whatever was on disk
+    // (legacy plaintext keys handled by SettingsStore's migration).
+    public init(from decoder: Decoder) throws { self.init() }
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode([String: String]())
     }
 }
 

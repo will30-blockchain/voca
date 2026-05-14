@@ -137,10 +137,16 @@ public enum CorrectionDiff {
     ]
 
     static func isCandidateTerm(_ token: String, existingDict: Set<String>, existingMemory: Set<String>) -> Bool {
-        guard token.count >= 3 else { return false }
+        // SECURITY: even if the upstream AXTextReader missed a secure field
+        // (custom NSView-backed input, etc.), the entropy + length guards
+        // below refuse to learn anything that looks like a credential. A
+        // proper noun is always <= 32 characters and never has the
+        // structural properties of an API key / JWT / base64 blob.
+        guard token.count >= 3, token.count <= 32 else { return false }
         let lower = token.lowercased()
         if existingDict.contains(lower) || existingMemory.contains(lower) { return false }
         if stopwords.contains(lower) { return false }
+        if looksLikeSecret(token) { return false }
 
         if containsCJK(token) { return true }
 
@@ -157,6 +163,53 @@ public enum CorrectionDiff {
         }
 
         return false
+    }
+
+    /// Refuse to learn anything that looks like a credential. Real proper
+    /// nouns score under 3.5 bits/char in Shannon entropy and don't start
+    /// with provider-specific token prefixes; secrets routinely score above
+    /// 4.5 bits/char and have telltale shapes.
+    static func looksLikeSecret(_ token: String) -> Bool {
+        let prefixes = [
+            "sk-", "sk_", "gsk_", "AKIA", "ya29.", "ghp_", "github_pat_",
+            "xoxb-", "xoxp-", "AIza", "AIzaSy", "ASIA", "ASIA-", "ATATT3"
+        ]
+        for prefix in prefixes where token.hasPrefix(prefix) { return true }
+
+        // JWT-shaped: 3 base64url segments separated by '.'
+        let segments = token.split(separator: ".")
+        if segments.count == 3,
+           segments.allSatisfy({ $0.count >= 4 && $0.allSatisfy { $0.isLetter || $0.isNumber || $0 == "_" || $0 == "-" } }) {
+            return true
+        }
+
+        // Anything ≥16 chars consisting entirely of base64/hex/url-safe
+        // characters is almost certainly a token.
+        if token.count >= 16 {
+            let urlSafe = CharacterSet(charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_+/=")
+            if token.unicodeScalars.allSatisfy({ urlSafe.contains($0) }) {
+                return true
+            }
+        }
+
+        // Entropy heuristic for medium length tokens (10..15 chars).
+        if token.count >= 10, shannonEntropy(token) > 4.0 {
+            return true
+        }
+        return false
+    }
+
+    private static func shannonEntropy(_ s: String) -> Double {
+        guard !s.isEmpty else { return 0 }
+        var counts: [Character: Int] = [:]
+        for ch in s { counts[ch, default: 0] += 1 }
+        let n = Double(s.count)
+        var h = 0.0
+        for c in counts.values {
+            let p = Double(c) / n
+            h -= p * (log(p) / log(2.0))
+        }
+        return h
     }
 
     private static func containsCJK(_ token: String) -> Bool {

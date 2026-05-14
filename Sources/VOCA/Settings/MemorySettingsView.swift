@@ -24,6 +24,26 @@ struct MemorySettingsView: View {
             VStack(alignment: .leading, spacing: DesignTokens.Space.md) {
                 SectionTitle("Personal facts")
 
+                // Explicit privacy disclosure: this textarea is appended to
+                // the LLM system prompt on every dictation, so whatever the
+                // user writes here is sent to their chosen cloud provider.
+                // Users routinely don't realise that. Surface it loudly.
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: "info.circle.fill")
+                        .foregroundStyle(DesignTokens.Color.warning)
+                        .font(.system(size: 13, weight: .medium))
+                    Text("These facts are sent to your selected LLM provider on every dictation. Don't include passwords, SSNs, medical IDs, or anything you wouldn't share with that vendor.")
+                        .font(DesignTokens.Typography.caption)
+                        .vtSecondaryText()
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                    RoundedRectangle(cornerRadius: DesignTokens.Radius.sm, style: .continuous)
+                        .fill(DesignTokens.Color.warning.opacity(0.10))
+                )
+
                 TextEditor(text: $draftFacts)
                     .font(DesignTokens.Typography.body)
                     .scrollContentBackground(.hidden)
@@ -38,14 +58,20 @@ struct MemorySettingsView: View {
                             .stroke(DesignTokens.Color.borderSubtle, lineWidth: 0.5)
                     )
                     .onChange(of: draftFacts) { _, newValue in
-                        if didLoadDraft { memory.setPersonalFacts(newValue) }
+                        if didLoadDraft {
+                            // Cap length defensively so a runaway paste
+                            // doesn't ship megabytes to the LLM.
+                            let bounded = String(newValue.prefix(2_000))
+                            memory.setPersonalFacts(bounded)
+                            if bounded != newValue { draftFacts = bounded }
+                        }
                     }
                     .onAppear {
                         draftFacts = memory.snapshot.personalFacts
                         didLoadDraft = true
                     }
 
-                Text("Free-form. Saved as you type.")
+                Text("Free-form. Saved as you type. Max 2,000 characters.")
                     .font(DesignTokens.Typography.caption)
                     .vtTertiaryText()
             }

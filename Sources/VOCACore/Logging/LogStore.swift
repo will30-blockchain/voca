@@ -109,15 +109,67 @@ public final class LogStore: ObservableObject {
 
     public var storagePath: URL { url }
 
+    // MARK: - Redaction
+
+    /// Patterns that look like credentials and must never end up on disk.
+    /// Even if a provider's HTTP error body echoes the user's
+    /// Authorization header, the file log won't carry it forward.
+    private static let secretPatterns: [NSRegularExpression] = {
+        let raw = [
+            #"(?i)\bBearer\s+[A-Za-z0-9._\-+/=]{8,}"#,
+            #"\bsk-[A-Za-z0-9_\-]{16,}"#,
+            #"\bsk_[A-Za-z0-9_\-]{16,}"#,
+            #"\bgsk_[A-Za-z0-9_\-]{16,}"#,
+            #"\bxox[bpars]-[A-Za-z0-9\-]{8,}"#,
+            #"\bghp_[A-Za-z0-9]{20,}"#,
+            #"\bgithub_pat_[A-Za-z0-9_]{20,}"#,
+            #"\bAKIA[0-9A-Z]{16}"#,
+            #"\bAIza[0-9A-Za-z\-_]{20,}"#,
+            // JWT-shaped: three url-safe base64 segments separated by dots
+            #"\beyJ[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+"#
+        ]
+        return raw.compactMap { try? NSRegularExpression(pattern: $0) }
+    }()
+
+    static func redact(_ entry: Entry) -> Entry {
+        return Entry(
+            id: entry.id,
+            date: entry.date,
+            level: entry.level,
+            category: entry.category,
+            message: redactString(entry.message),
+            detail: entry.detail.mapValues(redactString)
+        )
+    }
+
+    static func redactString(_ s: String) -> String {
+        var out = s
+        for re in secretPatterns {
+            let range = NSRange(out.startIndex..., in: out)
+            out = re.stringByReplacingMatches(
+                in: out,
+                options: [],
+                range: range,
+                withTemplate: "[REDACTED]"
+            )
+        }
+        return out
+    }
+
     // MARK: - Internals
 
     private func append(_ entry: Entry) {
+        // Scrub the entry before persisting or surfacing. A poorly-built
+        // server can include the request's Authorization header verbatim
+        // in its error body — we never want that material to land on disk.
+        let scrubbed = LogStore.redact(entry)
         // Newest first for the on-screen table; cap to `limit`.
-        entries.insert(entry, at: 0)
+        entries.insert(scrubbed, at: 0)
         if entries.count > limit {
             entries = Array(entries.prefix(limit))
         }
-        queue.async { [url, entry] in
+        queue.async { [url, scrubbed] in
+            let entry = scrubbed
             guard let data = try? JSONEncoder().encode(entry) else { return }
             var line = data
             line.append(0x0A) // newline
@@ -127,7 +179,11 @@ public final class LogStore: ObservableObject {
                 handle = h
                 _ = try? handle.seekToEnd()
             } else {
-                FileManager.default.createFile(atPath: url.path, contents: nil)
+                FileManager.default.createFile(
+                    atPath: url.path,
+                    contents: nil,
+                    attributes: [.posixPermissions: 0o600]
+                )
                 guard let h = try? FileHandle(forWritingTo: url) else { return }
                 handle = h
             }

@@ -93,7 +93,7 @@ public final class PersonalMemory: ObservableObject {
     private func save() {
         do {
             let data = try JSONEncoder().encode(snapshot)
-            try data.write(to: url, options: .atomic)
+            try SupportDirectory.writeSecurely(data, to: url)
         } catch {
             AppLog.memory.error("Failed to persist memory: \(String(describing: error), privacy: .public)")
         }

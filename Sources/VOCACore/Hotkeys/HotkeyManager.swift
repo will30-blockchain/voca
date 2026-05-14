@@ -77,6 +77,18 @@ public final class HotkeyManager {
                 return Unmanaged.passUnretained(event)
             }
 
+            // Ignore synthesized events. A hostile app posting flag-changed
+            // events with CGEventCreate could otherwise induce phantom
+            // dictations (mic light flips on, recording uploads to a cloud
+            // STT). HID events have non-zero hardware source IDs; synthetic
+            // events post with the source set to "combinedSessionState" /
+            // "hidSystemState" but with `eventTargetUnixProcessID` of the
+            // poster — easiest reliable signal is the `kCGEventSourceStateID`
+            // field on the event being negative or one of the synthetic IDs.
+            let source = event.getIntegerValueField(.eventSourceStateID)
+            let isSynthetic = source != 1   // 1 == kCGEventSourceStateHIDSystemState
+            if isSynthetic { return Unmanaged.passUnretained(event) }
+
             switch type {
             case .flagsChanged:
                 let rawFlags = UInt(event.flags.rawValue)

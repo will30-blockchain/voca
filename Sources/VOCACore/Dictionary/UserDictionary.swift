@@ -22,11 +22,27 @@ public final class UserDictionary: ObservableObject {
     public init() {
         self.url = SupportDirectory.file("dictionary.json")
 
-        if let data = try? Data(contentsOf: url),
-           let decoded = try? JSONDecoder().decode([Entry].self, from: data) {
-            self.entries = decoded
+        if let data = try? Data(contentsOf: url) {
+
+
+            if let decoded = try? JSONDecoder().decode([Entry].self, from: data) {
+                self.entries = decoded
+
+
+            } else {
+                CorruptFile.quarantine(url)
+                self.entries = []
+
+
+            }
+
+
         } else {
+
+
             self.entries = []
+
+
         }
     }
 
@@ -66,7 +82,7 @@ public final class UserDictionary: ObservableObject {
     private func save() {
         do {
             let data = try JSONEncoder().encode(entries)
-            try data.write(to: url, options: .atomic)
+            try SupportDirectory.writeSecurely(data, to: url)
         } catch {
             AppLog.memory.error("Failed to persist dictionary: \(String(describing: error), privacy: .public)")
         }

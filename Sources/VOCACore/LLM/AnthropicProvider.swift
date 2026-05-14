@@ -19,6 +19,7 @@ public struct AnthropicProvider: LLMProvider {
 
     public func complete(_ request: LLMRequest, model: String) async throws -> LLMResult {
         guard !apiKey.isEmpty else { throw LLMError.missingAPIKey(provider: "Anthropic") }
+        try EndpointValidator.validate(endpoint)
 
         struct AnthropicMessage: Encodable { let role: String; let content: String }
         struct Body: Encodable {

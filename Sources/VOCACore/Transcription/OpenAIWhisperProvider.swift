@@ -19,6 +19,7 @@ public struct OpenAIWhisperProvider: STTProvider {
 
     public func transcribe(_ request: STTRequest, model: String) async throws -> STTResult {
         guard !apiKey.isEmpty else { throw STTError.missingAPIKey(provider: "OpenAI") }
+        try EndpointValidator.validate(endpoint)
 
         var body = MultipartBody()
         body.appendFile(name: "file", filename: request.filename, mimeType: request.mimeType, fileData: request.audio)

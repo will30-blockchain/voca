@@ -19,6 +19,7 @@ public struct DeepgramProvider: STTProvider {
 
     public func transcribe(_ request: STTRequest, model: String) async throws -> STTResult {
         guard !apiKey.isEmpty else { throw STTError.missingAPIKey(provider: "Deepgram") }
+        try EndpointValidator.validate(endpoint)
 
         var components = URLComponents(url: endpoint, resolvingAgainstBaseURL: false)!
         var queryItems: [URLQueryItem] = [

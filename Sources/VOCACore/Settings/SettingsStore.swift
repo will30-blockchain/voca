@@ -1,9 +1,15 @@
 import Foundation
 import Combine
 
-/// Persists AppSettings to ~/Library/Application Support/VOCA/settings.json.
-/// API keys are stored in the file plain-text for v1 simplicity; future versions
-/// should move keys into Keychain. Marked TODO.
+/// Persists non-secret app preferences to
+/// ~/Library/Application Support/VOCA/settings.json. API keys live in the
+/// macOS Keychain (`com.voca.api-key.*`) and are accessed via the
+/// `ProviderCredentials` façade — they never touch the JSON file.
+///
+/// On first launch of the Keychain-backed version, the init migrates any
+/// pre-existing key material from `settings.json` (older builds wrote
+/// `credentials.groqAPIKey` etc. plaintext) into Keychain and rewrites the
+/// file without those fields, with 0600 permissions.
 @MainActor
 public final class SettingsStore: ObservableObject {
     @Published public private(set) var settings: AppSettings
@@ -13,12 +19,23 @@ public final class SettingsStore: ObservableObject {
     public init() {
         self.url = SupportDirectory.file("settings.json")
 
-        if let data = try? Data(contentsOf: url),
-           let decoded = try? JSONDecoder().decode(AppSettings.self, from: data) {
+        // Step 1: load whatever's on disk.
+        let raw = try? Data(contentsOf: url)
+        if let raw, let decoded = try? JSONDecoder().decode(AppSettings.self, from: raw) {
             self.settings = decoded
         } else {
             self.settings = .default
         }
+
+        // Step 2: one-time migration of plaintext API keys from older
+        // settings.json into Keychain.
+        if let raw {
+            migrateLegacyKeysIfNeeded(rawJSON: raw)
+        }
+
+        // Step 3: re-save so the file is normalised (no key fields) and
+        // its permissions are locked down to 0600.
+        save()
     }
 
     public func update(_ mutate: (inout AppSettings) -> Void) {
@@ -39,9 +56,45 @@ public final class SettingsStore: ObservableObject {
             encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
             let data = try encoder.encode(settings)
             try data.write(to: url, options: .atomic)
+            // Lock the file down — even though we no longer write keys
+            // here, the settings file still reveals provider choice etc.
+            try? FileManager.default.setAttributes(
+                [.posixPermissions: 0o600],
+                ofItemAtPath: url.path
+            )
         } catch {
             AppLog.app.error("Failed to save settings: \(String(describing: error), privacy: .public)")
         }
+    }
+
+    private func migrateLegacyKeysIfNeeded(rawJSON: Data) {
+        // Parse just enough of the old shape to extract keys. The legacy
+        // file had: { "credentials": { "groqAPIKey": "...", ... }, ... }.
+        guard let root = try? JSONSerialization.jsonObject(with: rawJSON) as? [String: Any],
+              let creds = root["credentials"] as? [String: Any] else {
+            return
+        }
+
+        let migrated: [(Keychain.Key, String)] = [
+            (.groq, creds["groqAPIKey"] as? String ?? ""),
+            (.openai, creds["openaiAPIKey"] as? String ?? ""),
+            (.anthropic, creds["anthropicAPIKey"] as? String ?? ""),
+            (.deepgram, creds["deepgramAPIKey"] as? String ?? "")
+        ]
+        var moved = 0
+        for (key, value) in migrated where !value.isEmpty {
+            // Only write if Keychain is currently empty — never overwrite a
+            // newer Keychain value with a stale plaintext one.
+            if Keychain.read(key).isEmpty {
+                if Keychain.write(key, value: value) { moved += 1 }
+            }
+        }
+        if moved > 0 {
+            AppLog.app.info("Migrated \(moved, privacy: .public) API key(s) from settings.json into Keychain")
+        }
+        // Note: the save() call after init() rewrites the file without the
+        // `credentials.*APIKey` values because the new ProviderCredentials
+        // encodes as an empty dict. So no extra scrubbing needed.
     }
 
     public var storagePath: URL { url }
