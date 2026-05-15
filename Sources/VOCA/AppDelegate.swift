@@ -28,6 +28,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppLog.app.info("VOCA launched.")
 
+        // Install a proper main menu so Cmd+C / Cmd+V / Cmd+X / Cmd+A
+        // route through the responder chain into the focused text field.
+        // Without this the API-key fields silently swallow paste.
+        NSApp.mainMenu = MainMenu.install(language: settingsStore.settings.uiLanguage)
+
         // Request mic + accessibility ASAP so the user only sees the system
         // prompts once, not on the first dictation press. forceMicrophone…
         // opens a tiny capture session so VOCA actually appears in
