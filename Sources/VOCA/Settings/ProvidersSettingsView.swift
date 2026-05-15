@@ -6,8 +6,8 @@ struct ProvidersSettingsView: View {
 
     var body: some View {
         SettingsPage(
-            title: "Providers",
-            subtitle: "Pick the models that power transcription and refinement. Groq runs Whisper-large at a fraction of OpenAI's price."
+            title: store.t(.tabProviders),
+            subtitle: store.t(.providersSubtitle)
         ) {
             transcriptionCard
             refinementCard
@@ -20,9 +20,9 @@ struct ProvidersSettingsView: View {
     private var transcriptionCard: some View {
         Card {
             VStack(alignment: .leading, spacing: DesignTokens.Space.md) {
-                SectionTitle("Transcription")
+                SectionTitle(store.t(.providersTranscriptionSection))
 
-                LabelledControl(title: "Provider") {
+                LabelledControl(title: store.t(.providersProviderLabel)) {
                     Picker("", selection: bind(\.sttProvider)) {
                         ForEach(STTProviderID.allCases, id: \.self) { provider in
                             Text(provider.displayName).tag(provider)
@@ -38,8 +38,8 @@ struct ProvidersSettingsView: View {
                 }
 
                 LabelledControl(
-                    title: "Model",
-                    hint: "Pick a preset or type a custom model name for newly released models."
+                    title: store.t(.providersModelLabel),
+                    hint: store.t(.providersModelHint)
                 ) {
                     ModelPicker(
                         known: store.settings.sttProvider.knownModels,
@@ -53,11 +53,11 @@ struct ProvidersSettingsView: View {
     private var refinementCard: some View {
         Card {
             VStack(alignment: .leading, spacing: DesignTokens.Space.md) {
-                SectionTitle("LLM refinement")
+                SectionTitle(store.t(.providersLLMSection))
 
                 LabelledControl(
-                    title: "Provider",
-                    hint: "Refinement cleans punctuation and disfluencies. Disable to paste the raw transcript."
+                    title: store.t(.providersProviderLabel),
+                    hint: store.t(.providersLLMHint)
                 ) {
                     Picker("", selection: bind(\.llmProvider)) {
                         ForEach(LLMProviderID.allCases, id: \.self) { provider in
@@ -73,7 +73,7 @@ struct ProvidersSettingsView: View {
                     }
                 }
 
-                LabelledControl(title: "Model") {
+                LabelledControl(title: store.t(.providersModelLabel)) {
                     ModelPicker(
                         known: store.settings.llmProvider.knownModels,
                         selection: bind(\.llmModel)
@@ -87,12 +87,16 @@ struct ProvidersSettingsView: View {
     private var keysCard: some View {
         Card {
             VStack(alignment: .leading, spacing: DesignTokens.Space.md) {
-                SectionTitle("API keys")
-                APIKeyField(title: "Groq", placeholder: "gsk_…", key: bind(\.credentials.groqAPIKey))
-                APIKeyField(title: "OpenAI", placeholder: "sk-…", key: bind(\.credentials.openaiAPIKey))
-                APIKeyField(title: "Anthropic", placeholder: "sk-ant-…", key: bind(\.credentials.anthropicAPIKey))
-                APIKeyField(title: "Deepgram", placeholder: "key", key: bind(\.credentials.deepgramAPIKey))
-                Text("Keys are stored locally in ~/Library/Application Support/VOCA/settings.json. Keychain storage is on the roadmap.")
+                SectionTitle(store.t(.providersKeysSection))
+                APIKeyField(title: "Groq", placeholder: "gsk_…", key: bind(\.credentials.groqAPIKey),
+                            showLabel: store.t(.providersShow), hideLabel: store.t(.providersHide))
+                APIKeyField(title: "OpenAI", placeholder: "sk-…", key: bind(\.credentials.openaiAPIKey),
+                            showLabel: store.t(.providersShow), hideLabel: store.t(.providersHide))
+                APIKeyField(title: "Anthropic", placeholder: "sk-ant-…", key: bind(\.credentials.anthropicAPIKey),
+                            showLabel: store.t(.providersShow), hideLabel: store.t(.providersHide))
+                APIKeyField(title: "Deepgram", placeholder: "key", key: bind(\.credentials.deepgramAPIKey),
+                            showLabel: store.t(.providersShow), hideLabel: store.t(.providersHide))
+                Text(store.t(.providersKeysFooter))
                     .font(DesignTokens.Typography.caption)
                     .vtTertiaryText()
             }
@@ -185,6 +189,8 @@ private struct APIKeyField: View {
     let title: String
     let placeholder: String
     @Binding var key: String
+    var showLabel: String = "Show"
+    var hideLabel: String = "Hide"
     @State private var isRevealed = false
 
     var body: some View {
@@ -203,7 +209,7 @@ private struct APIKeyField: View {
                 .textFieldStyle(.roundedBorder)
                 .font(DesignTokens.Typography.mono)
 
-                Button(isRevealed ? "Hide" : "Show") { isRevealed.toggle() }
+                Button(isRevealed ? hideLabel : showLabel) { isRevealed.toggle() }
                     .buttonStyle(.bordered)
             }
         }

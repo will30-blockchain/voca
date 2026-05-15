@@ -41,21 +41,21 @@ struct DashboardView: View {
     private var header: some View {
         HStack(alignment: .center, spacing: DesignTokens.Space.md) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("VOCA")
+                Text(store.t(.appName))
                     .font(DesignTokens.Typography.display)
                     .vtPrimaryText()
-                Text("Dictation and translation, on your own keys.")
+                Text(store.t(.appTagline))
                     .font(DesignTokens.Typography.body)
                     .vtSecondaryText()
             }
             Spacer()
             HStack(spacing: 6) {
-                Button("Dictionary", action: openDictionary)
-                Button("Memory", action: openMemory)
+                Button(store.t(.dashboardDictionary), action: openDictionary)
+                Button(store.t(.dashboardMemory), action: openMemory)
                 Button {
                     openSettings()
                 } label: {
-                    Label("Settings", systemImage: "slider.horizontal.3")
+                    Label(store.t(.dashboardSettings), systemImage: "slider.horizontal.3")
                 }
             }
             .controlSize(.regular)
@@ -77,30 +77,30 @@ struct DashboardView: View {
                     HStack(spacing: 8) {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .foregroundStyle(DesignTokens.Color.warning)
-                        Text("Finish setup")
+                        Text(store.t(.permissionsCardTitle))
                             .font(DesignTokens.Typography.headline)
                             .vtPrimaryText()
                     }
 
                     if !axGranted {
                         permissionRow(
-                            title: "Accessibility",
-                            body: "Lets the Right Option hotkey work in any app and lets VOCA paste at your cursor.",
-                            action: "Open Accessibility",
+                            title: store.t(.permAccessibilityTitle),
+                            body: store.t(.permAccessibilityBody),
+                            action: store.t(.permAccessibilityAction),
                             run: Permissions.openAccessibilitySettings
                         )
                     }
                     if !micGranted {
                         permissionRow(
-                            title: "Microphone",
-                            body: "Captures your speech. If VOCA doesn't appear in System Settings, click Request below.",
-                            action: "Request",
-                            secondary: ("Open settings", Permissions.openMicrophoneSettings),
+                            title: store.t(.permMicTitle),
+                            body: store.t(.permMicBody),
+                            action: store.t(.permMicRequest),
+                            secondary: (store.t(.permMicOpenSettings), Permissions.openMicrophoneSettings),
                             primaryStyle: .borderedProminent,
                             run: { Task { _ = await Permissions.forceMicrophoneRegistration() } }
                         )
                     }
-                    Text("After enabling a permission, quit VOCA (⌘Q) and relaunch — macOS only refreshes Accessibility trust on launch.")
+                    Text(store.t(.permissionsCardFooter))
                         .font(DesignTokens.Typography.caption)
                         .vtTertiaryText()
                 }
@@ -179,14 +179,14 @@ struct DashboardView: View {
                 Button(role: .destructive) {
                     Task { await engine.cancelRecording() }
                 } label: {
-                    Label("Cancel", systemImage: "xmark")
+                    Label(store.t(.actionCancel), systemImage: "xmark")
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.large)
                 Button {
                     Task { await engine.toggleRecording(mode: .transcribe) }
                 } label: {
-                    Label("Stop & paste", systemImage: "checkmark")
+                    Label(store.t(.actionStopAndPaste), systemImage: "checkmark")
                         .padding(.horizontal, 6)
                 }
                 .buttonStyle(.borderedProminent)
@@ -198,7 +198,7 @@ struct DashboardView: View {
             Button {
                 Task { await engine.toggleRecording(mode: .transcribe) }
             } label: {
-                Label(engineIsActive ? "Working…" : "Start dictation",
+                Label(engineIsActive ? store.t(.actionWorking) : store.t(.actionStartDictation),
                       systemImage: engineIsActive ? "ellipsis" : "mic.fill")
                     .padding(.horizontal, 6)
             }
@@ -249,24 +249,24 @@ struct DashboardView: View {
 
     private var statusTitle: String {
         switch engine.state {
-        case .idle: return "Ready"
-        case .recording(.transcribe): return "Listening"
-        case .recording(.translate): return "Listening · Translate"
+        case .idle: return store.t(.statusReady)
+        case .recording(.transcribe): return store.t(.statusListening)
+        case .recording(.translate): return store.t(.statusListeningTranslate)
         case .processing(_, let stage): return stage.label
-        case .error: return "Error"
+        case .error: return store.t(.statusError)
         }
     }
 
     private var statusSubtitle: String {
         switch engine.state {
         case .idle:
-            return "Tap Right Option to start dictation. Tap again to stop and paste."
+            return store.t(.statusReadyHint)
         case .recording(.transcribe):
-            return "Tap Right Option again — or press Return — to stop and paste."
+            return store.t(.statusListeningHint)
         case .recording(.translate):
-            return "Translating \(store.settings.translateSourceLanguage) → \(store.settings.translateTargetLanguage). Tap Right Option to stop."
+            return store.t(.statusListeningTranslateHint)
         case .processing:
-            return "Working through the pipeline — hang tight."
+            return store.t(.statusProcessingHint)
         case .error(let msg):
             return msg
         }
@@ -276,24 +276,24 @@ struct DashboardView: View {
 
     private var hotkeyCard: some View {
         VStack(alignment: .leading, spacing: DesignTokens.Space.md) {
-            SectionTitle("Hotkeys")
+            SectionTitle(store.t(.hotkeysTitle))
             HStack(alignment: .top, spacing: DesignTokens.Space.md) {
                 HotkeyCard(
                     icon: "waveform",
-                    title: "Dictate",
+                    title: store.t(.hotkeyDictateTitle),
                     keys: ["Right Option"],
-                    description: "Tap once to start, tap again to stop and paste.",
+                    description: store.t(.hotkeyDictateDescription),
                     tint: DesignTokens.Color.recording
                 )
                 HotkeyCard(
                     icon: "character.bubble",
-                    title: "Translate",
+                    title: store.t(.hotkeyTranslateTitle),
                     keys: ["Right Option", "Right Shift"],
-                    description: "Hold Right Shift while tapping Right Option. Tap Right Option again to stop.",
+                    description: store.t(.hotkeyTranslateDescription),
                     tint: DesignTokens.Color.translate
                 )
             }
-            Text("Right Option held continuously (longer than 0.5 s) still works for accent input — Option+E for é, etc.")
+            Text(store.t(.hotkeysAccentNote))
                 .font(DesignTokens.Typography.caption)
                 .vtTertiaryText()
         }
@@ -315,18 +315,18 @@ struct DashboardView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "key.fill")
                         .foregroundStyle(DesignTokens.Color.accent)
-                    Text("Add an API key to start dictating")
+                    Text(store.t(.setupTitle))
                         .font(DesignTokens.Typography.headline)
                         .vtPrimaryText()
                 }
-                Text("VOCA runs on your own API keys. The cheapest fast path is Groq — one key powers both the Whisper transcription and the LLM editor.")
+                Text(store.t(.setupBody))
                     .font(DesignTokens.Typography.body)
                     .vtSecondaryText()
                 HStack(spacing: DesignTokens.Space.sm) {
-                    Button("Open Providers", action: openProviders)
+                    Button(store.t(.setupOpenProviders), action: openProviders)
                         .buttonStyle(.borderedProminent)
                         .tint(DesignTokens.Color.accent)
-                    Button("Use Apple Speech instead") {
+                    Button(store.t(.setupUseAppleSpeech)) {
                         store.update { $0.sttProvider = .appleSpeech }
                         store.update { $0.llmProvider = .disabled }
                     }
@@ -346,11 +346,11 @@ struct DashboardView: View {
         Card {
             VStack(alignment: .leading, spacing: DesignTokens.Space.md) {
                 SectionTitle(
-                    "Recent dictations",
+                    store.t(.recentTitle),
                     trailing: history.entries.isEmpty
                         ? nil
                         : AnyView(
-                            Button("Clear", role: .destructive) { history.clear() }
+                            Button(store.t(.actionClear), role: .destructive) { history.clear() }
                                 .buttonStyle(.borderless)
                                 .font(DesignTokens.Typography.captionEmphasis)
                           )
@@ -358,18 +358,18 @@ struct DashboardView: View {
                 if history.entries.isEmpty {
                     EmptyState(
                         icon: "waveform.path",
-                        title: "Nothing yet",
-                        message: "Your last dictations will appear here once you've spoken into the meter."
+                        title: store.t(.recentEmptyTitle),
+                        message: store.t(.recentEmpty)
                     )
                 } else {
                     VStack(spacing: DesignTokens.Space.sm) {
                         ForEach(history.entries.prefix(8)) { entry in
-                            HistoryRow(entry: entry)
+                            HistoryRow(entry: entry, dictateLabel: store.t(.recentDictateLabel), translateLabel: store.t(.recentTranslateLabel))
                         }
                     }
                 }
                 HStack {
-                    Text("Total dictations: \(memory.snapshot.totalDictations)")
+                    Text("\(store.t(.recentTotalDictations)) \(memory.snapshot.totalDictations)")
                         .font(DesignTokens.Typography.caption)
                         .vtTertiaryText()
                     Spacer()
@@ -486,6 +486,8 @@ struct PipelineProgress: View {
 
 private struct HistoryRow: View {
     let entry: TranscriptHistory.Entry
+    let dictateLabel: String
+    let translateLabel: String
     static let formatter: DateFormatter = {
         let f = DateFormatter()
         f.dateStyle = .none
@@ -531,7 +533,7 @@ private struct HistoryRow: View {
     private var badge: some View {
         let isTranslate = entry.mode == "translate"
         let tint = isTranslate ? DesignTokens.Color.translate : DesignTokens.Color.accent
-        let label = isTranslate ? "Translate" : "Dictate"
+        let label = isTranslate ? translateLabel : dictateLabel
         return Text(label)
             .font(DesignTokens.Typography.captionEmphasis)
             .foregroundStyle(tint)

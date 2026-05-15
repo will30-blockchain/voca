@@ -9,6 +9,7 @@ final class HUDWindowController {
     private let engine: VOCAEngine
     private var cancellables: Set<AnyCancellable> = []
     private let settingsStore: SettingsStore
+    private let hostView: NSHostingView<AnyView>
 
     init(engine: VOCAEngine, settingsStore: SettingsStore) {
         self.engine = engine
@@ -37,15 +38,18 @@ final class HUDWindowController {
         // doesn't react to clicks because it's just a Text/Waveform.
         panel.ignoresMouseEvents = false
 
-        let host = NSHostingView(rootView: HUDView(
+        let hudRoot = HUDView(
             engine: engine,
             recorder: engine.recorder,
             onCancel: { Task { await engine.cancelRecording() } },
             onConfirm: { Task { await engine.endRecording() } },
             onRetry: { Task { await engine.retryLastRecording() } }
-        ))
+        )
+        .environmentObject(settingsStore)
+        let host = NSHostingView(rootView: AnyView(hudRoot))
         host.frame = rect
         panel.contentView = host
+        self.hostView = host
         self.window = panel
 
         engine.$state

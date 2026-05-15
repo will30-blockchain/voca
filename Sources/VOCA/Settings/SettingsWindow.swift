@@ -5,15 +5,15 @@ import VOCACore
 enum SettingsTab: String, CaseIterable, Identifiable {
     case general, providers, languages, dictionary, memory, logs, about
     var id: String { rawValue }
-    var title: String {
+    var localizationKey: L10n {
         switch self {
-        case .general: return "General"
-        case .providers: return "Providers"
-        case .languages: return "Languages"
-        case .dictionary: return "Dictionary"
-        case .memory: return "Memory"
-        case .logs: return "Logs"
-        case .about: return "About"
+        case .general: return .tabGeneral
+        case .providers: return .tabProviders
+        case .languages: return .tabLanguages
+        case .dictionary: return .tabDictionary
+        case .memory: return .tabMemory
+        case .logs: return .tabLogs
+        case .about: return .tabAbout
         }
     }
     var systemImage: String {
@@ -57,7 +57,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
             .environmentObject(log)
         let hosting = NSHostingController(rootView: root)
         let window = NSWindow(contentViewController: hosting)
-        window.title = "VOCA Settings"
+        window.title = "VOCA"
         window.styleMask = [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView]
         // Match the content's pinned light appearance — keeps the titlebar
         // and sidebar material light too.

@@ -13,9 +13,11 @@ final class ToastWindowController {
     private let learner: CorrectionLearner
     private var cancellables: Set<AnyCancellable> = []
     private var dismissTask: Task<Void, Never>?
+    private let settingsStore: SettingsStore
 
-    init(learner: CorrectionLearner) {
+    init(learner: CorrectionLearner, settingsStore: SettingsStore) {
         self.learner = learner
+        self.settingsStore = settingsStore
 
         let rect = NSRect(x: 0, y: 0, width: 320, height: 76)
         let panel = NSPanel(
@@ -43,7 +45,7 @@ final class ToastWindowController {
             onDismiss: { [weak learner] in
                 learner?.clearLatest()
             }
-        ))
+        ).environmentObject(settingsStore))
         host.frame = rect
         panel.contentView = host
         self.window = panel
@@ -122,6 +124,7 @@ final class ToastWindowController {
 
 private struct ToastView: View {
     @ObservedObject var learner: CorrectionLearner
+    @EnvironmentObject var store: SettingsStore
     let onUndo: () -> Void
     let onDismiss: () -> Void
 
@@ -143,10 +146,10 @@ private struct ToastView: View {
                     .lineLimit(1)
                     .truncationMode(.tail)
                 HStack(spacing: 8) {
-                    Text("added to dictionary")
+                    Text(store.t(.toastAddedToDictionary))
                         .font(DesignTokens.Typography.caption)
                         .foregroundStyle(DesignTokens.Color.textSecondary)
-                    Button("Undo", action: onUndo)
+                    Button(store.t(.actionUndo), action: onUndo)
                         .buttonStyle(.plain)
                         .font(DesignTokens.Typography.captionEmphasis)
                         .foregroundStyle(DesignTokens.Color.accent)

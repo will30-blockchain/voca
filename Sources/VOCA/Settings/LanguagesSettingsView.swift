@@ -6,8 +6,8 @@ struct LanguagesSettingsView: View {
 
     var body: some View {
         SettingsPage(
-            title: "Languages",
-            subtitle: "Set your dictation language and the source-target pair used in translate mode."
+            title: store.t(.tabLanguages),
+            subtitle: store.t(.languagesSubtitle)
         ) {
             primaryCard
             translateCard
@@ -17,8 +17,8 @@ struct LanguagesSettingsView: View {
     private var primaryCard: some View {
         Card {
             VStack(alignment: .leading, spacing: DesignTokens.Space.md) {
-                SectionTitle("Primary dictation")
-                Text("Language")
+                SectionTitle(store.t(.languagesPrimarySection))
+                Text(store.t(.languagesPrimaryLabel))
                     .font(DesignTokens.Typography.bodyEmphasis)
                     .vtPrimaryText()
                 Picker("", selection: bind(\.primaryLanguage)) {
@@ -28,7 +28,7 @@ struct LanguagesSettingsView: View {
                 }
                 .pickerStyle(.menu)
                 .labelsHidden()
-                Text("Auto-detect mixes Chinese and English smoothly. Pin a language if your accent confuses Whisper.")
+                Text(store.t(.languagesPrimaryHint))
                     .font(DesignTokens.Typography.caption)
                     .vtTertiaryText()
             }
@@ -38,10 +38,10 @@ struct LanguagesSettingsView: View {
     private var translateCard: some View {
         Card {
             VStack(alignment: .leading, spacing: DesignTokens.Space.md) {
-                SectionTitle("Translate mode")
+                SectionTitle(store.t(.languagesTranslateSection))
                 HStack(alignment: .center, spacing: DesignTokens.Space.md) {
                     VStack(alignment: .leading, spacing: DesignTokens.Space.xs) {
-                        Text("Source")
+                        Text(store.t(.languagesSourceLabel))
                             .font(DesignTokens.Typography.bodyEmphasis)
                             .vtPrimaryText()
                         Picker("", selection: bind(\.translateSourceLanguage)) {
@@ -59,7 +59,7 @@ struct LanguagesSettingsView: View {
                         .padding(.top, DesignTokens.Space.lg)
 
                     VStack(alignment: .leading, spacing: DesignTokens.Space.xs) {
-                        Text("Target")
+                        Text(store.t(.languagesTargetLabel))
                             .font(DesignTokens.Typography.bodyEmphasis)
                             .vtPrimaryText()
                         Picker("", selection: bind(\.translateTargetLanguage)) {
@@ -71,7 +71,7 @@ struct LanguagesSettingsView: View {
                         .labelsHidden()
                     }
                 }
-                Text("Hold Right Option + Right Shift to dictate in the source language and paste the translated result in the target language.")
+                Text(store.t(.languagesTranslateHint))
                     .font(DesignTokens.Typography.caption)
                     .vtTertiaryText()
             }

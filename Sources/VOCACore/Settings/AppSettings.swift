@@ -163,6 +163,8 @@ public struct AppSettings: Codable, Sendable, Equatable {
     public var injectionMethod: InjectionMethod
     /// Whether to play subtle sounds on start/stop.
     public var playSounds: Bool
+    /// UI display language. Defaults to .system (follow macOS locale).
+    public var uiLanguage: AppLanguage
 
     public enum InjectionMethod: String, Codable, CaseIterable, Sendable {
         case paste = "paste"
@@ -190,7 +192,8 @@ public struct AppSettings: Codable, Sendable, Equatable {
         learnFromCorrections: Bool = true,
         showHUD: Bool = true,
         injectionMethod: InjectionMethod = .paste,
-        playSounds: Bool = true
+        playSounds: Bool = true,
+        uiLanguage: AppLanguage = .system
     ) {
         self.sttProvider = sttProvider
         self.sttModel = sttModel
@@ -206,6 +209,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         self.showHUD = showHUD
         self.injectionMethod = injectionMethod
         self.playSounds = playSounds
+        self.uiLanguage = uiLanguage
     }
 
     public static let `default` = AppSettings()

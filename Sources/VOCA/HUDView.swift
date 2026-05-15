@@ -10,6 +10,7 @@ import VOCACore
 struct HUDView: View {
     @ObservedObject var engine: VOCAEngine
     @ObservedObject var recorder: AudioRecorder
+    @EnvironmentObject var store: SettingsStore
     var onCancel: () -> Void
     var onConfirm: () -> Void
     var onRetry: () -> Void
@@ -66,10 +67,10 @@ struct HUDView: View {
                 glyphColor: DesignTokens.Color.textSecondary,
                 action: onCancel
             )
-            .help("Dismiss")
+            .help(store.t(.actionDismiss))
 
             VStack(alignment: .leading, spacing: 1) {
-                Text("Couldn't transcribe")
+                Text(store.t(.hudCouldNotTranscribe))
                     .font(DesignTokens.Typography.captionEmphasis)
                     .foregroundStyle(DesignTokens.Color.danger)
                     .lineLimit(1)
@@ -83,7 +84,7 @@ struct HUDView: View {
 
             if engine.canRetry {
                 Button(action: onRetry) {
-                    Label("Retry", systemImage: "arrow.clockwise")
+                    Label(store.t(.actionRetry), systemImage: "arrow.clockwise")
                         .font(DesignTokens.Typography.captionEmphasis)
                         .padding(.horizontal, DesignTokens.Space.sm)
                         .padding(.vertical, 5)

@@ -6,13 +6,14 @@ import VOCACore
 /// shared scaffold here stays minimal.
 struct SettingsView: View {
     @State var selection: SettingsTab
+    @EnvironmentObject var store: SettingsStore
 
     init(initialTab: SettingsTab) { _selection = State(initialValue: initialTab) }
 
     var body: some View {
         NavigationSplitView {
             List(SettingsTab.allCases, selection: $selection) { tab in
-                Label(tab.title, systemImage: tab.systemImage)
+                Label(store.t(tab.localizationKey), systemImage: tab.systemImage)
                     .tag(tab)
             }
             .listStyle(.sidebar)
@@ -47,9 +48,10 @@ struct GeneralSettingsView: View {
 
     var body: some View {
         SettingsPage(
-            title: "General",
-            subtitle: "Behavior, hotkeys, and the macOS permissions VOCA needs to run."
+            title: store.t(.tabGeneral),
+            subtitle: store.t(.generalSubtitle)
         ) {
+            appearanceCard
             behaviorCard
             hotkeysCard
             toneCard
@@ -57,49 +59,22 @@ struct GeneralSettingsView: View {
         }
     }
 
-    private var behaviorCard: some View {
+    private var appearanceCard: some View {
         Card {
             VStack(alignment: .leading, spacing: DesignTokens.Space.md) {
-                SectionTitle("Behavior")
-
-                ToggleRow(
-                    title: "Show recording HUD",
-                    hint: "A small overlay near the menu bar while you dictate.",
-                    isOn: bind(\.showHUD)
-                )
-                Divider().background(DesignTokens.Color.borderSubtle)
-                ToggleRow(
-                    title: "Adaptive personal memory",
-                    hint: "Learn recurring names and phrases to improve future transcripts.",
-                    isOn: bind(\.learningEnabled)
-                )
-                Divider().background(DesignTokens.Color.borderSubtle)
-                ToggleRow(
-                    title: "Learn from corrections",
-                    hint: "When you fix a typo right after dictation, VOCA notices and adds the new word (proper nouns, acronyms, names) to your Dictionary automatically.",
-                    isOn: bind(\.learnFromCorrections)
-                )
-                Divider().background(DesignTokens.Color.borderSubtle)
-                ToggleRow(
-                    title: "Play subtle sounds",
-                    hint: "A soft tone on start and stop. Off if you record over calls.",
-                    isOn: bind(\.playSounds)
-                )
-
-                Divider().background(DesignTokens.Color.borderSubtle)
-
+                SectionTitle(store.t(.generalAppearanceSection))
                 VStack(alignment: .leading, spacing: DesignTokens.Space.xs) {
-                    Text("Injection method")
+                    Text(store.t(.generalAppearanceLanguageTitle))
                         .font(DesignTokens.Typography.bodyEmphasis)
                         .vtPrimaryText()
-                    Picker("", selection: bind(\.injectionMethod)) {
-                        ForEach(AppSettings.InjectionMethod.allCases, id: \.self) { method in
-                            Text(method.displayName).tag(method)
+                    Picker("", selection: bind(\.uiLanguage)) {
+                        ForEach(AppLanguage.allCases, id: \.self) { lang in
+                            Text(lang.displayName).tag(lang)
                         }
                     }
                     .pickerStyle(.menu)
                     .labelsHidden()
-                    Text("Paste is fastest and most reliable. Use simulated typing for apps that block paste.")
+                    Text(store.t(.generalAppearanceLanguageHint))
                         .font(DesignTokens.Typography.caption)
                         .vtTertiaryText()
                 }
@@ -107,13 +82,70 @@ struct GeneralSettingsView: View {
         }
     }
 
+    private var behaviorCard: some View {
+        Card {
+            VStack(alignment: .leading, spacing: DesignTokens.Space.md) {
+                SectionTitle(store.t(.generalBehaviorSection))
+
+                ToggleRow(
+                    title: store.t(.generalShowHUDTitle),
+                    hint: store.t(.generalShowHUDHint),
+                    isOn: bind(\.showHUD)
+                )
+                Divider().background(DesignTokens.Color.borderSubtle)
+                ToggleRow(
+                    title: store.t(.generalAdaptiveMemoryTitle),
+                    hint: store.t(.generalAdaptiveMemoryHint),
+                    isOn: bind(\.learningEnabled)
+                )
+                Divider().background(DesignTokens.Color.borderSubtle)
+                ToggleRow(
+                    title: store.t(.generalLearnCorrectionsTitle),
+                    hint: store.t(.generalLearnCorrectionsHint),
+                    isOn: bind(\.learnFromCorrections)
+                )
+                Divider().background(DesignTokens.Color.borderSubtle)
+                ToggleRow(
+                    title: store.t(.generalPlaySoundsTitle),
+                    hint: store.t(.generalPlaySoundsHint),
+                    isOn: bind(\.playSounds)
+                )
+
+                Divider().background(DesignTokens.Color.borderSubtle)
+
+                VStack(alignment: .leading, spacing: DesignTokens.Space.xs) {
+                    Text(store.t(.generalInjectionTitle))
+                        .font(DesignTokens.Typography.bodyEmphasis)
+                        .vtPrimaryText()
+                    Picker("", selection: bind(\.injectionMethod)) {
+                        ForEach(AppSettings.InjectionMethod.allCases, id: \.self) { method in
+                            Text(injectionDisplayName(method)).tag(method)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .labelsHidden()
+                    Text(store.t(.generalInjectionHint))
+                        .font(DesignTokens.Typography.caption)
+                        .vtTertiaryText()
+                }
+            }
+        }
+    }
+
+    private func injectionDisplayName(_ method: AppSettings.InjectionMethod) -> String {
+        switch method {
+        case .paste: return store.t(.generalInjectionPaste)
+        case .typed: return store.t(.generalInjectionTyped)
+        }
+    }
+
     private var hotkeysCard: some View {
         Card {
             VStack(alignment: .leading, spacing: DesignTokens.Space.md) {
-                SectionTitle("Hotkeys")
-                HotkeyRow(title: "Dictate", keys: ["Right Option"])
-                HotkeyRow(title: "Translate", keys: ["Right Option", "Right Shift"])
-                Text("Hotkeys are fixed in v1. Both modes require Accessibility permission.")
+                SectionTitle(store.t(.generalHotkeysSection))
+                HotkeyRow(title: store.t(.hotkeyDictateTitle), keys: ["Right Option"])
+                HotkeyRow(title: store.t(.hotkeyTranslateTitle), keys: ["Right Option", "Right Shift"])
+                Text(store.t(.generalHotkeysNote))
                     .font(DesignTokens.Typography.caption)
                     .vtTertiaryText()
             }
@@ -123,8 +155,8 @@ struct GeneralSettingsView: View {
     private var toneCard: some View {
         Card {
             VStack(alignment: .leading, spacing: DesignTokens.Space.md) {
-                SectionTitle("Refinement tone")
-                Text("Tone hint")
+                SectionTitle(store.t(.generalToneSection))
+                Text(store.t(.generalToneTitle))
                     .font(DesignTokens.Typography.bodyEmphasis)
                     .vtPrimaryText()
                 TextField(
@@ -135,7 +167,7 @@ struct GeneralSettingsView: View {
                 .lineLimit(2...4)
                 .textFieldStyle(.roundedBorder)
                 .font(DesignTokens.Typography.body)
-                Text("Passed to the LLM refiner as style guidance. Plain English is fine.")
+                Text(store.t(.generalToneFooter))
                     .font(DesignTokens.Typography.caption)
                     .vtTertiaryText()
             }
@@ -145,14 +177,14 @@ struct GeneralSettingsView: View {
     private var permissionsCard: some View {
         Card {
             VStack(alignment: .leading, spacing: DesignTokens.Space.md) {
-                SectionTitle("System permissions")
-                Text("VOCA needs microphone access to listen and Accessibility access to paste into the focused app.")
+                SectionTitle(store.t(.generalPermissionsSection))
+                Text(store.t(.generalPermissionsBody))
                     .font(DesignTokens.Typography.body)
                     .vtSecondaryText()
                 HStack(spacing: DesignTokens.Space.sm) {
-                    Button("Open Microphone settings") { Permissions.openMicrophoneSettings() }
+                    Button(store.t(.generalOpenMicSettings)) { Permissions.openMicrophoneSettings() }
                         .buttonStyle(.bordered)
-                    Button("Open Accessibility settings") { Permissions.openAccessibilitySettings() }
+                    Button(store.t(.generalOpenAccessibilitySettings)) { Permissions.openAccessibilitySettings() }
                         .buttonStyle(.bordered)
                 }
             }
@@ -170,36 +202,29 @@ struct GeneralSettingsView: View {
 // MARK: - About
 
 struct AboutSettingsView: View {
+    @EnvironmentObject var store: SettingsStore
+
     var body: some View {
         SettingsPage(
-            title: "About",
-            subtitle: "A native macOS dictation and translation tool that runs on your own API keys."
+            title: store.t(.tabAbout),
+            subtitle: store.t(.aboutSubtitle)
         ) {
             Card {
                 VStack(alignment: .leading, spacing: DesignTokens.Space.md) {
-                    SectionTitle("Defaults")
-                    AboutRow(
-                        title: "Transcription",
-                        detail: "Groq Whisper — fast and inexpensive."
-                    )
-                    AboutRow(
-                        title: "Refinement",
-                        detail: "Groq Llama 3.3 70B — quick rewrites in your tone."
-                    )
-                    AboutRow(
-                        title: "Offline fallback",
-                        detail: "Apple Speech runs entirely on-device when no API key is set."
-                    )
+                    SectionTitle(store.t(.aboutDefaultsSection))
+                    AboutRow(title: store.t(.aboutTranscription), detail: store.t(.aboutTranscriptionDetail))
+                    AboutRow(title: store.t(.aboutRefinement), detail: store.t(.aboutRefinementDetail))
+                    AboutRow(title: store.t(.aboutOffline), detail: store.t(.aboutOfflineDetail))
                 }
             }
 
             Card {
                 VStack(alignment: .leading, spacing: DesignTokens.Space.sm) {
-                    SectionTitle("Storage")
+                    SectionTitle(store.t(.aboutStorageSection))
                     Text("~/Library/Application Support/VOCA")
                         .font(DesignTokens.Typography.mono)
                         .vtSecondaryText()
-                    Text("Settings, dictionary, and personal memory are persisted as JSON.")
+                    Text(store.t(.aboutStorageFooter))
                         .font(DesignTokens.Typography.caption)
                         .vtTertiaryText()
                 }

@@ -3,13 +3,14 @@ import VOCACore
 
 struct MemorySettingsView: View {
     @EnvironmentObject var memory: PersonalMemory
+    @EnvironmentObject var store: SettingsStore
     @State private var draftFacts: String = ""
     @State private var didLoadDraft = false
 
     var body: some View {
         SettingsPage(
-            title: "Personal memory",
-            subtitle: "Background context VOCA appends to the LLM editor. The more specific the better — name, role, projects, recurring people."
+            title: store.t(.tabMemory),
+            subtitle: store.t(.memorySubtitle)
         ) {
             factsCard
             learnedPhrasesCard
@@ -22,17 +23,14 @@ struct MemorySettingsView: View {
     private var factsCard: some View {
         Card {
             VStack(alignment: .leading, spacing: DesignTokens.Space.md) {
-                SectionTitle("Personal facts")
+                SectionTitle(store.t(.memoryFactsSection))
 
-                // Explicit privacy disclosure: this textarea is appended to
-                // the LLM system prompt on every dictation, so whatever the
-                // user writes here is sent to their chosen cloud provider.
-                // Users routinely don't realise that. Surface it loudly.
+                // Explicit privacy disclosure (translated).
                 HStack(alignment: .top, spacing: 8) {
                     Image(systemName: "info.circle.fill")
                         .foregroundStyle(DesignTokens.Color.warning)
                         .font(.system(size: 13, weight: .medium))
-                    Text("These facts are sent to your selected LLM provider on every dictation. Don't include passwords, SSNs, medical IDs, or anything you wouldn't share with that vendor.")
+                    Text(store.t(.memoryFactsDisclosure))
                         .font(DesignTokens.Typography.caption)
                         .vtSecondaryText()
                         .fixedSize(horizontal: false, vertical: true)
@@ -71,7 +69,7 @@ struct MemorySettingsView: View {
                         didLoadDraft = true
                     }
 
-                Text("Free-form. Saved as you type. Max 2,000 characters.")
+                Text(store.t(.memoryFactsFooter))
                     .font(DesignTokens.Typography.caption)
                     .vtTertiaryText()
             }
@@ -81,14 +79,14 @@ struct MemorySettingsView: View {
     private var learnedPhrasesCard: some View {
         Card {
             VStack(alignment: .leading, spacing: DesignTokens.Space.md) {
-                SectionTitle("Auto-learned phrases")
-                Text("Phrases you've spoken more than once. VOCA uses them as transcription hints.")
+                SectionTitle(store.t(.memoryLearnedSection))
+                Text(store.t(.memoryLearnedHint))
                     .font(DesignTokens.Typography.caption)
                     .vtTertiaryText()
 
                 let phrases = memory.topPhrases(limit: 40)
                 if phrases.isEmpty {
-                    Text("No learned phrases yet — they appear after a few dictations.")
+                    Text(store.t(.memoryLearnedEmpty))
                         .font(DesignTokens.Typography.caption)
                         .vtTertiaryText()
                         .frame(maxWidth: .infinity, minHeight: 80, alignment: .center)
@@ -120,7 +118,7 @@ struct MemorySettingsView: View {
         Card {
             HStack(alignment: .center, spacing: DesignTokens.Space.md) {
                 VStack(alignment: .leading, spacing: DesignTokens.Space.xxs) {
-                    Text("Total dictations")
+                    Text(store.t(.memoryFooterTotal))
                         .font(DesignTokens.Typography.bodyEmphasis)
                         .vtPrimaryText()
                     Text("\(memory.snapshot.totalDictations)")
@@ -132,7 +130,7 @@ struct MemorySettingsView: View {
                     memory.reset()
                     draftFacts = ""
                 } label: {
-                    Label("Reset memory", systemImage: "trash")
+                    Label(store.t(.memoryReset), systemImage: "trash")
                 }
                 .buttonStyle(.bordered)
             }

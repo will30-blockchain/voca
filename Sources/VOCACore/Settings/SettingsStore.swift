@@ -98,4 +98,11 @@ public final class SettingsStore: ObservableObject {
     }
 
     public var storagePath: URL { url }
+
+    /// Convenience for views: localised lookup that re-renders automatically
+    /// when the user changes the UI language (since views observe this store
+    /// as an @EnvironmentObject).
+    public func t(_ key: L10n) -> String {
+        key.text(settings.uiLanguage)
+    }
 }

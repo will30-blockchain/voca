@@ -4,6 +4,7 @@ import VOCACore
 
 struct LogsSettingsView: View {
     @EnvironmentObject var log: LogStore
+    @EnvironmentObject var store: SettingsStore
 
     @State private var levelFilter: Filter = .all
     @State private var categoryFilter: LogStore.Category? = nil
@@ -17,8 +18,8 @@ struct LogsSettingsView: View {
 
     var body: some View {
         SettingsPage(
-            title: "Logs",
-            subtitle: "Every step the engine takes, persisted to ~/Library/Application Support/VOCA/log.jsonl. Use this to see why a take dropped or which provider failed."
+            title: store.t(.tabLogs),
+            subtitle: store.t(.logsSubtitle)
         ) {
             filtersCard
             entriesCard
@@ -30,7 +31,7 @@ struct LogsSettingsView: View {
         Card {
             HStack(alignment: .center, spacing: DesignTokens.Space.md) {
                 VStack(alignment: .leading, spacing: DesignTokens.Space.xs) {
-                    Text("Level")
+                    Text(store.t(.logsLevel))
                         .font(DesignTokens.Typography.bodyEmphasis)
                         .vtPrimaryText()
                     Picker("", selection: $levelFilter) {
@@ -43,7 +44,7 @@ struct LogsSettingsView: View {
                     .frame(minWidth: 280)
                 }
                 VStack(alignment: .leading, spacing: DesignTokens.Space.xs) {
-                    Text("Category")
+                    Text(store.t(.logsCategory))
                         .font(DesignTokens.Typography.bodyEmphasis)
                         .vtPrimaryText()
                     Picker("", selection: $categoryFilter) {
@@ -79,15 +80,15 @@ struct LogsSettingsView: View {
         Card(padding: DesignTokens.Space.md) {
             VStack(alignment: .leading, spacing: DesignTokens.Space.sm) {
                 SectionTitle(
-                    "Recent activity",
+                    store.t(.logsRecent),
                     trailing: AnyView(
-                        Text("\(filtered.count) of \(log.entries.count)")
+                        Text("\(filtered.count) / \(log.entries.count)")
                             .font(DesignTokens.Typography.caption)
                             .vtTertiaryText()
                     )
                 )
                 if filtered.isEmpty {
-                    Text("Nothing matches the current filter.")
+                    Text(store.t(.logsEmpty))
                         .font(DesignTokens.Typography.body)
                         .vtSecondaryText()
                         .frame(maxWidth: .infinity, minHeight: 120)
@@ -122,14 +123,14 @@ struct LogsSettingsView: View {
                     pb.clearContents()
                     pb.setString(log.plainText(), forType: .string)
                 } label: {
-                    Label("Copy all", systemImage: "doc.on.doc")
+                    Label(store.t(.logsCopyAll), systemImage: "doc.on.doc")
                 }
                 .buttonStyle(.bordered)
 
                 Button {
                     NSWorkspace.shared.activateFileViewerSelecting([log.storagePath])
                 } label: {
-                    Label("Reveal in Finder", systemImage: "folder")
+                    Label(store.t(.logsReveal), systemImage: "folder")
                 }
                 .buttonStyle(.bordered)
 
@@ -139,7 +140,7 @@ struct LogsSettingsView: View {
                     log.clear()
                     expanded.removeAll()
                 } label: {
-                    Label("Clear", systemImage: "trash")
+                    Label(store.t(.actionClear), systemImage: "trash")
                 }
                 .buttonStyle(.bordered)
             }

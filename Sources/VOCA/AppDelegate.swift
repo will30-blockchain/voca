@@ -45,7 +45,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
 
         hudController = HUDWindowController(engine: engine, settingsStore: settingsStore)
-        toastController = ToastWindowController(learner: engine.learner)
+        toastController = ToastWindowController(learner: engine.learner, settingsStore: settingsStore)
 
         // Wire hotkeys → engine (tap-toggle + ESC to cancel).
         hotkeys.onToggle = { [weak self] mode in
