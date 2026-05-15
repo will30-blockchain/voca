@@ -143,6 +143,11 @@ public enum L10n: String, CaseIterable, Sendable {
     case providersKeysFooter
     case providersShow
     case providersHide
+    case providersEdit
+    case providersSave
+    case providersCancel
+    case providersNotSet
+    case providersConfigured
 
     // MARK: - Languages settings
     case languagesSubtitle
@@ -317,6 +322,11 @@ public enum L10n: String, CaseIterable, Sendable {
         .providersKeysFooter: "Keys are stored in the macOS Keychain (com.voca.api-key.*). The settings JSON never contains key material.",
         .providersShow: "Show",
         .providersHide: "Hide",
+        .providersEdit: "Edit",
+        .providersSave: "Save",
+        .providersCancel: "Cancel",
+        .providersNotSet: "Not set",
+        .providersConfigured: "Configured",
 
         .languagesSubtitle: "Set your dictation language and the source-target pair used in translate mode.",
         .languagesPrimarySection: "Primary dictation",
@@ -478,6 +488,11 @@ public enum L10n: String, CaseIterable, Sendable {
         .providersKeysFooter: "金鑰存在 macOS 鑰匙圈 (com.voca.api-key.*),設定 JSON 不會包含任何金鑰內容。",
         .providersShow: "顯示",
         .providersHide: "隱藏",
+        .providersEdit: "編輯",
+        .providersSave: "儲存",
+        .providersCancel: "取消",
+        .providersNotSet: "尚未設定",
+        .providersConfigured: "已設定",
 
         .languagesSubtitle: "設定錄音語言、以及翻譯模式的來源/目標語言。",
         .languagesPrimarySection: "主要錄音語言",
