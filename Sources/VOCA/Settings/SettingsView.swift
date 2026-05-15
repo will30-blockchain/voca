@@ -59,25 +59,26 @@ struct GeneralSettingsView: View {
         }
     }
 
+    /// Top-of-General language card. Uses a segmented control with two
+    /// explicit options so the choice is obviously two-state and the
+    /// switch is one click rather than a dropdown step.
     private var appearanceCard: some View {
         Card {
             VStack(alignment: .leading, spacing: DesignTokens.Space.md) {
                 SectionTitle(store.t(.generalAppearanceSection))
-                VStack(alignment: .leading, spacing: DesignTokens.Space.xs) {
-                    Text(store.t(.generalAppearanceLanguageTitle))
-                        .font(DesignTokens.Typography.bodyEmphasis)
-                        .vtPrimaryText()
-                    Picker("", selection: bind(\.uiLanguage)) {
-                        ForEach(AppLanguage.allCases, id: \.self) { lang in
-                            Text(lang.displayName).tag(lang)
-                        }
+                Text(store.t(.generalAppearanceLanguageTitle))
+                    .font(DesignTokens.Typography.bodyEmphasis)
+                    .vtPrimaryText()
+                Picker("", selection: bind(\.uiLanguage)) {
+                    ForEach(AppLanguage.allCases, id: \.self) { lang in
+                        Text(lang.displayName).tag(lang)
                     }
-                    .pickerStyle(.menu)
-                    .labelsHidden()
-                    Text(store.t(.generalAppearanceLanguageHint))
-                        .font(DesignTokens.Typography.caption)
-                        .vtTertiaryText()
                 }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                Text(store.t(.generalAppearanceLanguageHint))
+                    .font(DesignTokens.Typography.caption)
+                    .vtTertiaryText()
             }
         }
     }
