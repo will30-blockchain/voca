@@ -1,27 +1,45 @@
 import Foundation
 
-/// User-selectable UI language. `.system` means "match the macOS language
-/// at app launch"; explicit picks override the system. Persisted via
-/// AppSettings.uiLanguage.
-public enum AppLanguage: String, Codable, CaseIterable, Sendable {
-    case system
+/// User-selectable UI language. v1 keeps the choice simple — explicit
+/// English or 繁體中文. On first install we auto-pick based on the macOS
+/// system language; after that the user's choice persists.
+public enum AppLanguage: String, CaseIterable, Sendable {
     case english = "en"
     case traditionalChinese = "zh-Hant"
 
     public var displayName: String {
         switch self {
-        case .system: return "Follow system / 跟隨系統"
         case .english: return "English"
         case .traditionalChinese: return "繁體中文"
         }
     }
 
-    /// Resolves `.system` to a concrete language using macOS locale.
-    public var effective: AppLanguage {
-        if self != .system { return self }
+    /// First-launch default: zh-Hant if macOS reports a Chinese locale,
+    /// otherwise English.
+    public static var systemDefault: AppLanguage {
         let code = Locale.current.language.languageCode?.identifier ?? "en"
-        if code.lowercased().hasPrefix("zh") { return .traditionalChinese }
-        return .english
+        return code.lowercased().hasPrefix("zh") ? .traditionalChinese : .english
+    }
+
+    /// Identity. Kept so older callers that read `.effective` still compile;
+    /// since `.system` is gone, the effective value is always the value
+    /// itself.
+    public var effective: AppLanguage { self }
+}
+
+extension AppLanguage: Codable {
+    /// Custom decode so older settings.json files that wrote
+    /// `"uiLanguage": "system"` don't throw on load. Anything we can't
+    /// recognise resolves to the current system default.
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = (try? container.decode(String.self)) ?? ""
+        self = AppLanguage(rawValue: raw) ?? .systemDefault
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
     }
 }
 
@@ -205,11 +223,9 @@ public enum L10n: String, CaseIterable, Sendable {
     case aboutStorageFooter
 
     public func text(_ language: AppLanguage) -> String {
-        let effective = language.effective
-        switch effective {
+        switch language {
         case .english: return Self.en[self] ?? rawValue
         case .traditionalChinese: return Self.zhHant[self] ?? Self.en[self] ?? rawValue
-        case .system: return Self.en[self] ?? rawValue
         }
     }
 

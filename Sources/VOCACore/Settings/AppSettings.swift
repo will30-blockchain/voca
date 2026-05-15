@@ -193,7 +193,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         showHUD: Bool = true,
         injectionMethod: InjectionMethod = .paste,
         playSounds: Bool = true,
-        uiLanguage: AppLanguage = .system
+        uiLanguage: AppLanguage = .systemDefault
     ) {
         self.sttProvider = sttProvider
         self.sttModel = sttModel
