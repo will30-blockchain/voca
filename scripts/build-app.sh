@@ -5,6 +5,7 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
+PROJECT_ROOT="$(pwd)"
 
 CONFIG=${CONFIG:-release}
 APP_NAME="VOCA"
@@ -14,10 +15,14 @@ VERSION=${VERSION:-0.1.0}
 DIST_DIR="dist"
 APP_DIR="${DIST_DIR}/${APP_NAME}.app"
 CERT_CN="VOCA Dev"
+KEYCHAIN_PATH="${PROJECT_ROOT}/build/voca-signing.keychain-db"
+KEYCHAIN_PASS="voca"
 
-# Ensure a stable signing identity exists.
-if ! security find-identity -p codesigning -v 2>/dev/null | grep -qF "\"${CERT_CN}\""; then
-    echo "▸ Stable signing identity '${CERT_CN}' missing — running setup-signing.sh"
+# Ensure the project-local signing keychain + identity exist.
+if [[ ! -f "${KEYCHAIN_PATH}" ]] || \
+   ! security find-identity -p codesigning -v "${KEYCHAIN_PATH}" 2>/dev/null \
+       | grep -qF "\"${CERT_CN}\""; then
+    echo "▸ Local signing keychain or '${CERT_CN}' identity missing — running setup-signing.sh"
     "$(dirname "$0")/setup-signing.sh"
 fi
 
@@ -90,11 +95,38 @@ cat > "${APP_DIR}/Contents/Info.plist" <<PLIST
 PLIST
 
 ENTITLEMENTS="$(dirname "$0")/VOCA.entitlements"
-echo "▸ Signing with '${CERT_CN}' + entitlements"
+echo "▸ Signing with '${CERT_CN}' + entitlements (project-local keychain)"
+
+# Save the user's current keychain search list so we can restore it on exit.
+# codesign requires the signing keychain to be in the search list at the
+# moment it runs; macOS does not honour --keychain alone for that lookup.
+# We temporarily prepend our project keychain and guarantee a restore via
+# `trap`, so the user's search list is unchanged once this script finishes
+# — even if codesign fails or the user hits Ctrl-C.
+ORIG_SEARCH_LIST=$(security list-keychains -d user | sed -E 's/^[[:space:]]*//' | tr -d '"')
+restore_search_list() {
+    if [[ -n "${ORIG_SEARCH_LIST:-}" ]]; then
+        # shellcheck disable=SC2086
+        security list-keychains -d user -s ${ORIG_SEARCH_LIST} >/dev/null
+    fi
+}
+trap restore_search_list EXIT INT TERM
+
+# Temporarily add the project keychain to the front of the search list.
+# shellcheck disable=SC2086
+security list-keychains -d user -s "${KEYCHAIN_PATH}" ${ORIG_SEARCH_LIST} >/dev/null
+
+# Unlock in case it auto-locked since the last build.
+security unlock-keychain -p "${KEYCHAIN_PASS}" "${KEYCHAIN_PATH}" >/dev/null
+
+# --keychain narrows codesign's identity search to just our project keychain.
 codesign --force --deep --sign "${CERT_CN}" \
+    --keychain "${KEYCHAIN_PATH}" \
     --options runtime \
     --entitlements "${ENTITLEMENTS}" \
     "${APP_DIR}" >/dev/null
+
+# restore_search_list runs via trap on EXIT
 
 echo
 echo "✅ ${APP_DIR}"

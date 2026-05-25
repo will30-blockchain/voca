@@ -54,10 +54,10 @@ public struct DeepgramProvider: STTProvider {
 
         let (data, response) = try await session.data(for: req)
         guard let http = response as? HTTPURLResponse else {
-            throw STTError.http(status: -1, body: "no response")
+            throw STTError.http(provider: "Deepgram", status: -1, body: "no response")
         }
         guard (200..<300).contains(http.statusCode) else {
-            throw STTError.http(status: http.statusCode, body: String(data: data, encoding: .utf8) ?? "")
+            throw STTError.fromHTTP(provider: "Deepgram", response: http, data: data)
         }
 
         struct Response: Decodable {

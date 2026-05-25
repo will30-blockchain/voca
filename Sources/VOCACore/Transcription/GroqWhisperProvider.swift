@@ -42,10 +42,10 @@ public struct GroqWhisperProvider: STTProvider {
 
         let (data, response) = try await session.data(for: req)
         guard let http = response as? HTTPURLResponse else {
-            throw STTError.http(status: -1, body: "no response")
+            throw STTError.http(provider: "Groq", status: -1, body: "no response")
         }
         guard (200..<300).contains(http.statusCode) else {
-            throw STTError.http(status: http.statusCode, body: String(data: data, encoding: .utf8) ?? "")
+            throw STTError.fromHTTP(provider: "Groq", response: http, data: data)
         }
 
         do {

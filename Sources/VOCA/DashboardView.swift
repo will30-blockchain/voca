@@ -13,12 +13,22 @@ struct DashboardView: View {
     let openMemory: () -> Void
 
     @State private var permissionTicker = 0
+    /// AX trust state at the moment this view first appeared. macOS only
+    /// re-reads AX trust at process start, so if this was false but the
+    /// runtime check now returns true, the user granted permission while
+    /// VOCA was running and a relaunch is required for global hotkeys to
+    /// actually receive events.
+    @State private var axGrantedAtLaunch: Bool? = nil
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: DesignTokens.Space.xl) {
                 header
-                permissionBanner
+                if needsRestartForAX {
+                    restartBanner
+                } else {
+                    permissionBanner
+                }
                 statusCard
                 if missingKey { setupCard }
                 hotkeyCard
@@ -31,9 +41,21 @@ struct DashboardView: View {
             .frame(maxWidth: .infinity, alignment: .center)
         }
         .background(DesignTokens.Color.surface)
+        .onAppear {
+            if axGrantedAtLaunch == nil {
+                axGrantedAtLaunch = Permissions.accessibilityTrusted
+            }
+        }
         .onReceive(Timer.publish(every: 2, on: .main, in: .common).autoconnect()) { _ in
             permissionTicker &+= 1
         }
+    }
+
+    /// True iff the user granted Accessibility *after* this process started.
+    private var needsRestartForAX: Bool {
+        let _ = permissionTicker
+        guard let initial = axGrantedAtLaunch, initial == false else { return false }
+        return Permissions.accessibilityTrusted
     }
 
     // MARK: - Header
@@ -141,6 +163,38 @@ struct DashboardView: View {
     }
 
     private enum PermissionButtonStyle { case bordered, borderedProminent }
+
+    /// Prominent banner shown when AX was granted mid-session — invites
+    /// the user to restart so the granted permission actually takes effect.
+    private var restartBanner: some View {
+        Card(padding: DesignTokens.Space.lg) {
+            HStack(alignment: .top, spacing: DesignTokens.Space.md) {
+                Image(systemName: "arrow.triangle.2.circlepath.circle.fill")
+                    .font(.system(size: 22, weight: .medium))
+                    .foregroundStyle(DesignTokens.Color.accent)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(store.t(.permAXJustGrantedTitle))
+                        .font(DesignTokens.Typography.headline)
+                        .vtPrimaryText()
+                    Text(store.t(.permAXJustGrantedBody))
+                        .font(DesignTokens.Typography.body)
+                        .vtSecondaryText()
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: DesignTokens.Space.md)
+                Button(store.t(.permActionRestartNow)) {
+                    Relaunch.now()
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(DesignTokens.Color.accent)
+                .controlSize(.large)
+            }
+        }
+        .overlay(
+            RoundedRectangle(cornerRadius: DesignTokens.Radius.md, style: .continuous)
+                .strokeBorder(DesignTokens.Color.accent.opacity(0.55), lineWidth: 1)
+        )
+    }
 
     // MARK: - Status
 
@@ -279,16 +333,14 @@ struct DashboardView: View {
             SectionTitle(store.t(.hotkeysTitle))
             HStack(alignment: .top, spacing: DesignTokens.Space.md) {
                 HotkeyCard(
-                    icon: "waveform",
                     title: store.t(.hotkeyDictateTitle),
-                    keys: ["Right Option"],
+                    keys: [.rightOption],
                     description: store.t(.hotkeyDictateDescription),
                     tint: DesignTokens.Color.recording
                 )
                 HotkeyCard(
-                    icon: "character.bubble",
                     title: store.t(.hotkeyTranslateTitle),
-                    keys: ["Right Option", "Right Shift"],
+                    keys: [.rightOption, .rightShift],
                     description: store.t(.hotkeyTranslateDescription),
                     tint: DesignTokens.Color.translate
                 )
@@ -385,43 +437,25 @@ struct DashboardView: View {
 /// one-line description. Two of these sit side-by-side so the user sees
 /// the two modes as visually-distinct first-class actions.
 private struct HotkeyCard: View {
-    let icon: String
     let title: String
-    let keys: [String]
+    let keys: [Keycap.Spec]
     let description: String
     let tint: Color
 
     var body: some View {
         VStack(alignment: .leading, spacing: DesignTokens.Space.md) {
-            Image(systemName: icon)
-                .font(.system(size: 22, weight: .medium))
-                .foregroundStyle(tint)
-                .frame(width: 44, height: 44)
-                .background(Circle().fill(tint.opacity(0.12)))
-
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 10) {
                 Text(title)
                     .font(DesignTokens.Typography.title2)
                     .vtPrimaryText()
-                HStack(spacing: 6) {
+                HStack(alignment: .center, spacing: 8) {
                     ForEach(Array(keys.enumerated()), id: \.offset) { index, key in
                         if index > 0 {
-                            Text("+")
-                                .font(DesignTokens.Typography.caption)
+                            Image(systemName: "plus")
+                                .font(.system(size: 10, weight: .semibold))
                                 .vtTertiaryText()
                         }
-                        Text(key)
-                            .font(DesignTokens.Typography.mono)
-                            .vtPrimaryText()
-                            .padding(.horizontal, 7).padding(.vertical, 2)
-                            .background(
-                                RoundedRectangle(cornerRadius: 5, style: .continuous)
-                                    .fill(DesignTokens.Color.surfaceSunken)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 5, style: .continuous)
-                                    .stroke(DesignTokens.Color.borderSubtle, lineWidth: 0.5)
-                            )
+                        Keycap(spec: key, tint: tint)
                     }
                 }
             }
@@ -443,6 +477,75 @@ private struct HotkeyCard: View {
             RoundedRectangle(cornerRadius: DesignTokens.Radius.md, style: .continuous)
                 .stroke(DesignTokens.Color.border, lineWidth: 0.5)
         )
+    }
+}
+
+/// Vivid keycap — physical-looking key with the Mac modifier glyph
+/// (⌥, ⇧) front and center, a small "R" tag indicating it's the
+/// right-side key, and a subtle highlight + drop shadow so it reads as
+/// a real piece of hardware rather than just text.
+struct Keycap: View {
+    let spec: Spec
+    let tint: Color
+
+    struct Spec: Equatable {
+        let symbol: String   // SF Symbol for the modifier (option / shift)
+        let label: String    // short cap label, e.g. "option"
+        let side: Side
+        enum Side { case left, right, none }
+
+        static let rightOption = Spec(symbol: "option", label: "option", side: .right)
+        static let rightShift = Spec(symbol: "shift", label: "shift", side: .right)
+    }
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            DesignTokens.Color.surfaceElevated,
+                            DesignTokens.Color.surfaceSunken
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .stroke(DesignTokens.Color.border, lineWidth: 0.6)
+                )
+                .overlay(
+                    // Top inner highlight — fakes a beveled keycap edge.
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .trim(from: 0, to: 0.5)
+                        .stroke(Color.white.opacity(0.7), lineWidth: 0.6)
+                        .rotationEffect(.degrees(180))
+                        .blendMode(.plusLighter)
+                )
+                .shadow(color: Color.black.opacity(0.10), radius: 1.5, x: 0, y: 1)
+
+            if spec.side == .right {
+                Text("R")
+                    .font(.system(size: 8.5, weight: .heavy, design: .rounded))
+                    .foregroundStyle(tint)
+                    .padding(.leading, 6)
+                    .padding(.top, 4)
+            }
+
+            VStack(spacing: 1) {
+                Image(systemName: spec.symbol)
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(DesignTokens.Color.textPrimary)
+                Text(spec.label)
+                    .font(.system(size: 8.5, weight: .semibold, design: .rounded))
+                    .textCase(.uppercase)
+                    .vtTertiaryText()
+                    .tracking(0.4)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .frame(width: 54, height: 46)
     }
 }
 

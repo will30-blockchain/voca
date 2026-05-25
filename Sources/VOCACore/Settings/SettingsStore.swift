@@ -21,7 +21,15 @@ public final class SettingsStore: ObservableObject {
 
         // Step 1: load whatever's on disk.
         let raw = try? Data(contentsOf: url)
-        if let raw, let decoded = try? JSONDecoder().decode(AppSettings.self, from: raw) {
+        if let raw, var decoded = try? JSONDecoder().decode(AppSettings.self, from: raw) {
+            // Migration: older builds saved Chinese as the script-agnostic
+            // "zh"; we now require explicit "zh-Hant" or "zh-Hans" so the
+            // LLM can pick the right character set. Default to Traditional
+            // on migration since the original picker label was "中文" and
+            // the project itself ships with a Traditional Chinese UI.
+            if decoded.primaryLanguage == "zh" { decoded.primaryLanguage = "zh-Hant" }
+            if decoded.translateSourceLanguage == "zh" { decoded.translateSourceLanguage = "zh-Hant" }
+            if decoded.translateTargetLanguage == "zh" { decoded.translateTargetLanguage = "zh-Hant" }
             self.settings = decoded
         } else {
             self.settings = .default

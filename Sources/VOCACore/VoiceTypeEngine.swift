@@ -338,12 +338,17 @@ public final class VOCAEngine: ObservableObject {
             .compactMap { $0 }
         let prompt = biasPieces.isEmpty ? nil : "Glossary: " + biasPieces.joined(separator: " | ")
 
+        // STT providers (Whisper, Deepgram) only understand the base
+        // ISO-639-1 code, not script tags like "zh-Hant". Strip the script
+        // tag before sending; the LLM refinement step uses the full code
+        // (incl. script) to enforce Traditional vs Simplified output.
+        let sttLang = SupportedLanguage(rawValue: s.primaryLanguage)?.sttCode ?? s.primaryLanguage
         let req = STTRequest(
             audio: rec.audio,
             sampleRate: rec.sampleRate,
             mimeType: "audio/wav",
             filename: "audio.wav",
-            language: s.primaryLanguage,
+            language: sttLang,
             prompt: prompt
         )
         return try await withTransientRetry(category: .stt, label: "transcribe") {
@@ -362,12 +367,21 @@ public final class VOCAEngine: ObservableObject {
         let user: String
         switch mode {
         case .transcribe:
+            // Prefer the user's explicit language pick over Whisper's
+            // auto-detect. Whisper returns "Chinese" / "zh" without script
+            // info, so when Chinese is detected on auto we fall back to
+            // the UI language preference to pick Traditional vs Simplified.
+            let languageHint: String? = resolveLanguageHint(
+                userPick: s.primaryLanguage,
+                detected: raw.detectedLanguage,
+                uiLanguage: s.uiLanguage
+            )
             system = RefinementPrompts.system(
                 tone: s.tone,
                 glossary: dictionary.entries.map { $0.term },
                 memoryPhrases: memory.topPhrases(limit: 20),
                 personalFacts: memory.snapshot.personalFacts,
-                detectedLanguage: raw.detectedLanguage
+                detectedLanguage: languageHint
             )
             user = RefinementPrompts.user(transcript: raw.text)
         case .translate:
@@ -394,6 +408,34 @@ public final class VOCAEngine: ObservableObject {
             try await provider.complete(req, model: s.llmModel)
         }
         return result.text.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// Decide which language code to feed the LLM refinement prompt.
+    /// Order of preference:
+    ///   1. The user's explicit `primaryLanguage` pick (e.g. "zh-Hant").
+    ///   2. Whisper's `detectedLanguage`, but only if it carries enough
+    ///      information to drive a script choice. Whisper returns "Chinese"
+    ///      / "zh" without script info, so for ambiguous Chinese we fall
+    ///      back to the UI language preference (Trad vs Simp).
+    private func resolveLanguageHint(
+        userPick: String,
+        detected: String?,
+        uiLanguage: AppLanguage
+    ) -> String? {
+        if userPick != "auto" && !userPick.isEmpty {
+            return userPick
+        }
+        guard let detected, !detected.isEmpty else { return nil }
+        let lower = detected.lowercased()
+        let isAmbiguousChinese =
+            lower == "chinese" ||
+            lower == "zh" ||
+            lower == "zho" ||
+            lower == "cmn"
+        if isAmbiguousChinese {
+            return uiLanguage == .traditionalChinese ? "zh-Hant" : "zh-Hans"
+        }
+        return detected
     }
 
     // MARK: - Retry

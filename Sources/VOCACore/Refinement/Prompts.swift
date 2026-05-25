@@ -34,7 +34,7 @@ public enum RefinementPrompts {
         )
 
         if let lang = detectedLanguage, !lang.isEmpty {
-            sections.append("Detected language hint: \(lang). Respond in this language unless the transcript itself is clearly in another language.")
+            sections.append(languageRule(for: lang))
         }
 
         if !glossary.isEmpty {
@@ -57,6 +57,30 @@ public enum RefinementPrompts {
 
     public static func user(transcript: String) -> String {
         "Raw transcript:\n\"\"\"\n\(transcript)\n\"\"\""
+    }
+
+    /// Build a language directive that distinguishes Traditional vs
+    /// Simplified Chinese. Whisper returns "zh" without script info, so
+    /// the LLM tends to guess Simplified by default — this enforces the
+    /// user's explicit pick (or any zh-Hant / zh-Hans tag we pass through).
+    static func languageRule(for code: String) -> String {
+        let lower = code.lowercased()
+        if lower == "zh-hant" || lower == "zh_hant" || lower.hasPrefix("zh-tw") || lower.hasPrefix("zh-hk") {
+            return """
+            Output language: Traditional Chinese (繁體中文). \
+            MUST use Traditional Chinese characters only — never Simplified. \
+            For example: 「臺灣」not「台湾」, 「資訊」not「资讯」, 「為」not「为」. \
+            If the raw transcript contains Simplified characters (Whisper occasionally outputs them), convert them to their Traditional equivalents.
+            """
+        }
+        if lower == "zh-hans" || lower == "zh_hans" || lower.hasPrefix("zh-cn") || lower.hasPrefix("zh-sg") {
+            return """
+            Output language: Simplified Chinese (简体中文). \
+            MUST use Simplified Chinese characters only — never Traditional. \
+            If the raw transcript contains Traditional characters, convert them to their Simplified equivalents.
+            """
+        }
+        return "Detected language hint: \(code). Respond in this language unless the transcript itself is clearly in another language."
     }
 }
 
@@ -88,6 +112,10 @@ public enum TranslationPrompts {
               5. Tone target: \(tone).
             """
         )
+
+        // For Chinese targets, enforce the script choice explicitly —
+        // models default to Simplified for the generic "Chinese" target.
+        sections.append(RefinementPrompts.languageRule(for: target))
 
         if !glossary.isEmpty {
             let joined = glossary.prefix(80).joined(separator: ", ")

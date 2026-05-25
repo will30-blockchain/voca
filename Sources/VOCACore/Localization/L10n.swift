@@ -105,6 +105,10 @@ public enum L10n: String, CaseIterable, Sendable {
     case permMicRequest
     case permMicOpenSettings
 
+    case permAXJustGrantedTitle
+    case permAXJustGrantedBody
+    case permActionRestartNow
+
     // MARK: - HUD pill
     case hudCouldNotTranscribe
 
@@ -287,6 +291,10 @@ public enum L10n: String, CaseIterable, Sendable {
         .permMicRequest: "Request",
         .permMicOpenSettings: "Open settings",
 
+        .permAXJustGrantedTitle: "Restart required",
+        .permAXJustGrantedBody: "macOS only reads Accessibility trust on launch. Restart so the global hotkey works.",
+        .permActionRestartNow: "Restart VOCA",
+
         .hudCouldNotTranscribe: "Couldn't transcribe",
 
         .toastAddedToDictionary: "added to dictionary",
@@ -409,10 +417,10 @@ public enum L10n: String, CaseIterable, Sendable {
         .statusListening: "聆聽中",
         .statusListeningTranslate: "聆聽中 · 翻譯",
         .statusError: "錯誤",
-        .statusReadyHint: "點一下 Right Option 開始錄音,再點一下停止並貼上。",
+        .statusReadyHint: "點一下 Right Option 開始錄音，再點一下停止並貼上。",
         .statusListeningHint: "再點一下 Right Option(或按 Return)停止並貼上。",
         .statusListeningTranslateHint: "正在翻譯到你指定的目標語言。點 Right Option 停止。",
-        .statusProcessingHint: "處理中,請稍候。",
+        .statusProcessingHint: "處理中，請稍候。",
 
         .actionStartDictation: "開始錄音",
         .actionStopAndPaste: "停止並貼上",
@@ -426,7 +434,7 @@ public enum L10n: String, CaseIterable, Sendable {
 
         .hotkeysTitle: "快捷鍵",
         .hotkeyDictateTitle: "錄音",
-        .hotkeyDictateDescription: "點一下開始,再點一下停止並貼上。",
+        .hotkeyDictateDescription: "點一下開始，再點一下停止並貼上。",
         .hotkeyTranslateTitle: "翻譯",
         .hotkeyTranslateDescription: "按住 Right Shift 的同時點 Right Option。再點 Right Option 停止。",
         .hotkeysAccentNote: "按住 Right Option 超過 0.5 秒不會觸發 — 輸入重音字元(Option+E → é)等照常運作。",
@@ -449,9 +457,13 @@ public enum L10n: String, CaseIterable, Sendable {
         .permAccessibilityBody: "讓 Right Option 全域快捷鍵在任何 app 都能用、並讓 VOCA 把文字貼到你的游標位置。",
         .permAccessibilityAction: "打開輔助使用設定",
         .permMicTitle: "麥克風",
-        .permMicBody: "用來收音。如果 VOCA 沒出現在系統設定的麥克風清單,點下方「請求」。",
+        .permMicBody: "用來收音。如果 VOCA 沒出現在系統設定的麥克風清單，點下方「請求」。",
         .permMicRequest: "請求",
         .permMicOpenSettings: "打開設定",
+
+        .permAXJustGrantedTitle: "需要重啟才生效",
+        .permAXJustGrantedBody: "macOS 只在啟動時讀權限。重啟 VOCA,全域熱鍵才會生效。",
+        .permActionRestartNow: "重啟 VOCA",
 
         .hudCouldNotTranscribe: "轉錄失敗",
 
@@ -466,21 +478,21 @@ public enum L10n: String, CaseIterable, Sendable {
         .tabLogs: "日誌",
         .tabAbout: "關於",
 
-        .generalSubtitle: "行為、快捷鍵,以及 VOCA 需要的 macOS 權限。",
+        .generalSubtitle: "行為、快捷鍵，以及 VOCA 需要的 macOS 權限。",
         .generalAppearanceSection: "外觀",
         .generalAppearanceLanguageTitle: "介面語言",
-        .generalAppearanceLanguageHint: "切換後立即生效,不需重開 app。",
+        .generalAppearanceLanguageHint: "切換後立即生效，不需重開 app。",
         .generalBehaviorSection: "行為",
         .generalShowHUDTitle: "顯示錄音 HUD",
         .generalShowHUDHint: "錄音時在螢幕底部浮現一個小膠囊。",
         .generalAdaptiveMemoryTitle: "自適應個人記憶",
-        .generalAdaptiveMemoryHint: "學習你常講的名字與詞彙,讓往後的轉錄更精準。",
+        .generalAdaptiveMemoryHint: "學習你常講的名字與詞彙，讓往後的轉錄更精準。",
         .generalLearnCorrectionsTitle: "從修正中學習",
-        .generalLearnCorrectionsHint: "當你在貼上後立刻修改字詞,VOCA 會偵測新的專有名詞/縮寫並自動加入字典。",
+        .generalLearnCorrectionsHint: "當你在貼上後立刻修改字詞，VOCA 會偵測新的專有名詞/縮寫並自動加入字典。",
         .generalPlaySoundsTitle: "播放提示音",
         .generalPlaySoundsHint: "開始與結束時播放輕柔的鐘聲。如果你常邊通話邊錄音可關掉。",
         .generalInjectionTitle: "文字注入方式",
-        .generalInjectionHint: "貼上最快、最穩定。某些 app 會擋貼上,這時改用模擬輸入。",
+        .generalInjectionHint: "貼上最快、最穩定。某些 app 會擋貼上，這時改用模擬輸入。",
         .generalInjectionPaste: "貼上 (⌘V)",
         .generalInjectionTyped: "模擬輸入",
         .generalHotkeysSection: "快捷鍵",
@@ -489,7 +501,7 @@ public enum L10n: String, CaseIterable, Sendable {
         .generalToneTitle: "語氣提示",
         .generalToneFooter: "會以系統提示的方式傳給 LLM 作為風格引導。寫白話文即可。",
         .generalPermissionsSection: "系統權限",
-        .generalPermissionsBody: "VOCA 需要麥克風權限收音,以及輔助使用權限把文字貼進目前的 app。",
+        .generalPermissionsBody: "VOCA 需要麥克風權限收音，以及輔助使用權限把文字貼進目前的 app。",
         .generalOpenMicSettings: "開啟麥克風設定",
         .generalOpenAccessibilitySettings: "開啟輔助使用設定",
 
@@ -499,7 +511,7 @@ public enum L10n: String, CaseIterable, Sendable {
         .providersKeysSection: "API 金鑰",
         .providersProviderLabel: "供應商",
         .providersModelLabel: "模型",
-        .providersModelHint: "選一個預設模型,或對新發表的模型直接輸入名稱。",
+        .providersModelHint: "選一個預設模型，或對新發表的模型直接輸入名稱。",
         .providersLLMHint: "修飾會清掉贅字並補上標點。停用會直接貼上原始轉錄。",
         .providersKeysFooter: "金鑰存在 macOS 鑰匙圈 (com.voca.api-key.*),設定 JSON 不會包含任何金鑰內容。",
         .providersShow: "顯示",
@@ -513,13 +525,13 @@ public enum L10n: String, CaseIterable, Sendable {
         .languagesSubtitle: "設定錄音語言、以及翻譯模式的來源/目標語言。",
         .languagesPrimarySection: "主要錄音語言",
         .languagesPrimaryLabel: "語言",
-        .languagesPrimaryHint: "「自動偵測」對中英混講最順。如果你的口音常讓 Whisper 誤判,就指定一個固定語言。",
+        .languagesPrimaryHint: "「自動偵測」對中英混講最順。如果你的口音常讓 Whisper 誤判，就指定一個固定語言。",
         .languagesTranslateSection: "翻譯模式",
         .languagesSourceLabel: "來源",
         .languagesTargetLabel: "目標",
-        .languagesTranslateHint: "按住 Right Option + Right Shift 用來源語言錄音,結果會以目標語言貼出。",
+        .languagesTranslateHint: "按住 Right Option + Right Shift 用來源語言錄音，結果會以目標語言貼出。",
 
-        .dictionarySubtitle: "你常講的人名、縮寫、專有名詞。VOCA 會把這些一併送給 STT 模型與 LLM 編輯器,維持拼字一致。",
+        .dictionarySubtitle: "你常講的人名、縮寫、專有名詞。VOCA 會把這些一併送給 STT 模型與 LLM 編輯器，維持拼字一致。",
         .dictionaryAddSection: "加入新詞",
         .dictionaryTermLabel: "詞彙",
         .dictionaryTermPlaceholder: "例如 Anthropic、MLX、Will",
@@ -531,17 +543,17 @@ public enum L10n: String, CaseIterable, Sendable {
         .dictionaryColNote: "註記",
         .dictionaryRemoveSelected: "移除選取",
 
-        .memorySubtitle: "VOCA 會把這些背景資訊附加給 LLM 編輯器,越具體越好 — 名字、角色、進行中的專案、常出現的人。",
+        .memorySubtitle: "VOCA 會把這些背景資訊附加給 LLM 編輯器，越具體越好 — 名字、角色、進行中的專案、常出現的人。",
         .memoryFactsSection: "個人資料",
         .memoryFactsDisclosure: "這欄的內容會在每次轉錄時跟著送給你選的 LLM 供應商。不要寫密碼、身分證號、健保卡號或不想分享給那家廠商的資訊。",
-        .memoryFactsFooter: "自由填寫,輸入時即時儲存。上限 2,000 字。",
+        .memoryFactsFooter: "自由填寫，輸入時即時儲存。上限 2,000 字。",
         .memoryLearnedSection: "自動學到的詞",
-        .memoryLearnedHint: "你講過兩次以上的詞,VOCA 會在轉錄時用來提示。",
+        .memoryLearnedHint: "你講過兩次以上的詞，VOCA 會在轉錄時用來提示。",
         .memoryLearnedEmpty: "目前還沒學到任何詞 — 多錄幾次就會出現。",
         .memoryFooterTotal: "累計轉錄次數",
         .memoryReset: "重設記憶",
 
-        .logsSubtitle: "VOCA 引擎每一步的紀錄,存在 ~/Library/Application Support/VOCA/log.jsonl。可以看是哪一步被丟掉、或是哪家供應商失敗。",
+        .logsSubtitle: "VOCA 引擎每一步的紀錄，存在 ~/Library/Application Support/VOCA/log.jsonl。可以看是哪一步被丟掉、或是哪家供應商失敗。",
         .logsLevel: "等級",
         .logsCategory: "類別",
         .logsRecent: "近期活動",
@@ -549,7 +561,7 @@ public enum L10n: String, CaseIterable, Sendable {
         .logsCopyAll: "全部複製",
         .logsReveal: "在 Finder 顯示",
 
-        .aboutSubtitle: "原生 macOS 語音轉錄與翻譯工具,用你自己的 API key 跑。",
+        .aboutSubtitle: "原生 macOS 語音轉錄與翻譯工具，用你自己的 API key 跑。",
         .aboutDefaultsSection: "預設",
         .aboutTranscription: "轉錄",
         .aboutTranscriptionDetail: "Groq Whisper — 又快又便宜。",

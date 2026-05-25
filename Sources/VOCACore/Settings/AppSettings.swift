@@ -218,7 +218,8 @@ public struct AppSettings: Codable, Sendable, Equatable {
 public enum SupportedLanguage: String, CaseIterable, Sendable {
     case auto
     case en
-    case zh
+    case zhHant = "zh-Hant"
+    case zhHans = "zh-Hans"
     case ja
     case ko
     case es
@@ -235,7 +236,8 @@ public enum SupportedLanguage: String, CaseIterable, Sendable {
         switch self {
         case .auto: return "Auto-detect"
         case .en: return "English"
-        case .zh: return "中文"
+        case .zhHant: return "繁體中文"
+        case .zhHans: return "简体中文"
         case .ja: return "日本語"
         case .ko: return "한국어"
         case .es: return "Español"
@@ -247,6 +249,16 @@ public enum SupportedLanguage: String, CaseIterable, Sendable {
         case .vi: return "Tiếng Việt"
         case .th: return "ไทย"
         case .id: return "Bahasa Indonesia"
+        }
+    }
+
+    /// ISO-639-1 base code to send to STT providers. Whisper / Deepgram only
+    /// understand the base language code; the script tag (`-Hant` / `-Hans`)
+    /// is handled later in the LLM refinement prompt.
+    public var sttCode: String {
+        switch self {
+        case .zhHant, .zhHans: return "zh"
+        default: return rawValue
         }
     }
 }
