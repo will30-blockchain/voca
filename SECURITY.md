@@ -7,7 +7,7 @@ mic, and pastes into other apps. We take vulnerability reports seriously.
 
 **Do not** open a public GitHub issue for security reports.
 
-Email <INSERT EMAIL> with:
+Email **valley.mirror7602@eagereverest.com** with:
 - A short description of the issue.
 - Steps to reproduce (or a proof-of-concept).
 - Your assessment of impact.

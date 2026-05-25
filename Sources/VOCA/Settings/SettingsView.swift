@@ -230,6 +230,48 @@ struct AboutSettingsView: View {
                         .vtTertiaryText()
                 }
             }
+
+            Card {
+                VStack(alignment: .leading, spacing: DesignTokens.Space.md) {
+                    SectionTitle(store.t(.aboutSupportSection))
+                    WalletRow(label: store.t(.aboutSupportEmailLabel), value: SupportInfo.email)
+                    WalletRow(label: "BTC", value: SupportInfo.btc)
+                    WalletRow(label: "EVM", value: SupportInfo.evm)
+                    WalletRow(label: "SOL", value: SupportInfo.sol)
+                    Text(store.t(.aboutSupportFooter))
+                        .font(DesignTokens.Typography.caption)
+                        .vtTertiaryText()
+                }
+            }
+        }
+    }
+}
+
+/// Public-by-design support addresses surfaced in About.
+private enum SupportInfo {
+    static let email = "valley.mirror7602@eagereverest.com"
+    static let btc = "bc1pzrjrmhru0lm6g062d0nccmu0emhfmymqhacfqen3dya2985r8kvs09jxmy"
+    static let evm = "0x081540Eb4c21B8Be8a652d408A4711bFaffeB5f4"
+    static let sol = "GarVB5hdQ4bZ2JfJcNG8i363CL2jWBFDscwLWVNrzVxD"
+}
+
+private struct WalletRow: View {
+    let label: String
+    let value: String
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: DesignTokens.Space.md) {
+            Text(label)
+                .font(DesignTokens.Typography.bodyEmphasis)
+                .vtPrimaryText()
+                .frame(width: 64, alignment: .leading)
+            Text(value)
+                .font(DesignTokens.Typography.mono)
+                .vtSecondaryText()
+                .textSelection(.enabled)
+                .lineLimit(1)
+                .truncationMode(.middle)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 }

@@ -225,6 +225,9 @@ public enum L10n: String, CaseIterable, Sendable {
     case aboutOfflineDetail
     case aboutStorageSection
     case aboutStorageFooter
+    case aboutSupportSection
+    case aboutSupportFooter
+    case aboutSupportEmailLabel
 
     public func text(_ language: AppLanguage) -> String {
         switch language {
@@ -400,7 +403,10 @@ public enum L10n: String, CaseIterable, Sendable {
         .aboutOffline: "Offline fallback",
         .aboutOfflineDetail: "Apple Speech runs entirely on-device when no API key is set.",
         .aboutStorageSection: "Storage",
-        .aboutStorageFooter: "Settings, dictionary, and personal memory are persisted as JSON."
+        .aboutStorageFooter: "Settings, dictionary, and personal memory are persisted as JSON.",
+        .aboutSupportSection: "Support development",
+        .aboutSupportFooter: "VOCA is maintained in spare time. Tips go toward Apple Developer fees and API credits used during testing. Select any address to copy.",
+        .aboutSupportEmailLabel: "Email"
     ]
 
     // MARK: - 繁體中文
@@ -570,6 +576,9 @@ public enum L10n: String, CaseIterable, Sendable {
         .aboutOffline: "離線備援",
         .aboutOfflineDetail: "沒設定任何 API key 時可改用 Apple Speech,完全在裝置本機跑。",
         .aboutStorageSection: "資料儲存",
-        .aboutStorageFooter: "設定、字典、個人記憶都以 JSON 儲存在本機。"
+        .aboutStorageFooter: "設定、字典、個人記憶都以 JSON 儲存在本機。",
+        .aboutSupportSection: "贊助開發",
+        .aboutSupportFooter: "VOCA 在業餘時間維護，贊助會用在 Apple 開發者年費與測試時的 API 額度。點選地址即可複製。",
+        .aboutSupportEmailLabel: "聯絡信箱"
     ]
 }

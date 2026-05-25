@@ -250,6 +250,21 @@ PRs welcome. See [`CONTRIBUTING.md`](CONTRIBUTING.md). For non-trivial changes,
 open an issue first to discuss the approach. By participating you agree to
 our [Code of Conduct](CODE_OF_CONDUCT.md).
 
+## Support development
+
+VOCA is built and maintained in spare time. If it saves you time or
+typing pain, consider chipping in — it pays for the occasional Apple
+Developer Program fee, coffee, and the API credits used while testing.
+
+| Network | Address |
+|---|---|
+| **Bitcoin** (`BTC`, native segwit / taproot) | `bc1pzrjrmhru0lm6g062d0nccmu0emhfmymqhacfqen3dya2985r8kvs09jxmy` |
+| **Ethereum + EVM** (`ERC-20` — also works on Polygon, BSC, Arbitrum, Base, etc.) | `0x081540Eb4c21B8Be8a652d408A4711bFaffeB5f4` |
+| **Solana** (`SOL`, `SPL`) | `GarVB5hdQ4bZ2JfJcNG8i363CL2jWBFDscwLWVNrzVxD` |
+
+For non-crypto support or anything else, email
+**valley.mirror7602@eagereverest.com**.
+
 ## Acknowledgments
 
 VOCA was built collaboratively with
