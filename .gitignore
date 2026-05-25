@@ -1,6 +1,7 @@
 .DS_Store
 .build/
 .swiftpm/
+build/
 DerivedData/
 *.xcodeproj
 dist/
@@ -8,3 +9,18 @@ dist/
 *.dmg
 xcuserdata/
 Package.resolved
+
+# Secrets — belt and braces. Real keys live in
+# ~/Library/Application Support/VOCA/settings.json (outside the repo).
+# These patterns block accidental commits if a dev ever drops one in here.
+.env
+.env.*
+*.p12
+*.cer
+*.pem
+*.key
+*.keychain
+*.keychain-db
+settings.json
+log.jsonl
+secrets/

@@ -6,6 +6,34 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- `SECURITY.md` — vulnerability disclosure policy, in-scope vs out-of-scope
+  list, response SLA.
+- `CODE_OF_CONDUCT.md` — Contributor Covenant v2.1.
+- `.github/PULL_REQUEST_TEMPLATE.md` — matches the checklist in
+  `CONTRIBUTING.md`.
+- `docs/ARCHITECTURE.md` — long-form companion to README's architecture
+  section: layering rules, pipeline state machine, provider abstraction,
+  language resolution, hotkey + AX model, auto-learn flow, logging
+  redaction, build pipeline notes.
+- README: dedicated **First launch — bypassing Gatekeeper** section with
+  step-by-step instructions for the right-click → Open dance, an
+  `xattr -dr com.apple.quarantine` fallback for the "App is damaged"
+  case, a **Distribution status** table, and a **Threat model** section
+  describing what's in / out of scope.
+- README: **Acknowledgments** crediting Claude Code as the
+  pair-programming collaborator and the SuperCard design system /
+  Typeless as inspirations.
+- Defensive `.gitignore` patterns for `.env*`, `*.p12`, `*.cer`, `*.pem`,
+  `*.key`, `*.keychain*`, `settings.json`, `log.jsonl`, `secrets/` so a
+  stray real credentials file cannot be committed by accident.
+
+### Changed
+
+- Replaced placeholder `your-org/voca-ai-typer` with the real repo
+  `will30-blockchain/voca` across README and CONTRIBUTING.
+
 ## [0.1.0] — 2026-05-15
 
 Initial public release. Renamed from internal "VoiceType" → **VOCA**.
