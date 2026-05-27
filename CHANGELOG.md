@@ -8,6 +8,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Auto-learn visibility (was practically invisible before)
 
+- **Edit-time trigger (new)** — `CorrectionLearner` now starts a polling
+  task right after each paste that re-reads the focused AX element at
+  1 Hz. When the user stops typing for ~3 s and the text differs from
+  what VOCA pasted, the review fires *immediately* so the toast appears
+  in real time, not on the next dictation. Polls for up to 60 s, then
+  gives up; the previous "review on next dictation" path is still active
+  as a safety net.
 - **Bottom-center toast (was top-right)** — when an edit triggers an
   auto-learn, the "X added to dictionary" strip now appears bottom-centre
   and stays for **12 seconds** (was 5). The previous placement was easy

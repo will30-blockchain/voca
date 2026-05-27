@@ -31,6 +31,11 @@ public final class CorrectionLearner: ObservableObject {
 
     private var pendingSnapshot: AXTextReader.Snapshot?
     private var pendingPasteText: String = ""
+    /// Polling task that watches the focused AX field for edits and fires
+    /// `reviewPendingPaste()` as soon as the user stops typing — so the
+    /// "added to dictionary" toast appears in real time, not on the
+    /// *next* dictation. See `startEditWatch(snapshot:)`.
+    private var watchTask: Task<Void, Never>?
 
     public init(dictionary: UserDictionary, memory: PersonalMemory, log: LogStore) {
         self.dictionary = dictionary
@@ -39,24 +44,83 @@ public final class CorrectionLearner: ObservableObject {
     }
 
     /// Called from the engine right after a successful paste. Captures the
-    /// focused element so we can re-read it on the next dictation cycle.
+    /// focused element + kicks off an edit-watcher Task that polls the AX
+    /// value and fires `reviewPendingPaste()` as soon as the user stops
+    /// editing — so the user gets immediate feedback. `reviewPendingPaste`
+    /// is *also* still called on the next dictation as a safety net.
     public func recordPaste(_ text: String) {
         guard !text.isEmpty else { return }
+        watchTask?.cancel()
         if let snap = AXTextReader.snapshotFocusedField() {
             pendingSnapshot = snap
             pendingPasteText = text
             log.info(.memory, "Captured paste for learning", detail: ["chars": "\(text.count)"])
+            startEditWatch(snapshot: snap)
         } else {
             pendingSnapshot = nil
             log.info(.memory, "Could not snapshot focused field — skipping correction learning")
         }
     }
 
-    /// Triggered at the start of the next dictation (a strong signal the
-    /// user is "done" with the previous text). Reads the current value of
-    /// the focused element, diffs it, and adds any new proper-noun-like
-    /// tokens to the dictionary.
+    /// Watches the focused element for edits and fires `reviewPendingPaste`
+    /// when the user stops typing. Cheap polling — 1 Hz AX read for up to
+    /// 60 s — is the simpler implementation choice over `AXObserver`
+    /// notifications and is plenty for a feature that fires once per
+    /// dictation. Cancels itself when:
+    ///   - the user starts a new dictation (`recordPaste` cancels + restarts),
+    ///   - `reviewPendingPaste` runs through any other path,
+    ///   - 60 s elapse without detecting a stable edit, or
+    ///   - the AX element becomes unreadable (window closed, focus changed
+    ///     into a non-text field, etc.).
+    private func startEditWatch(snapshot: AXTextReader.Snapshot) {
+        let initial = snapshot.valueAtPaste
+        watchTask = Task { [weak self] in
+            // Settle delay — the paste may not have landed in the AX tree
+            // for a frame or two, and polling immediately is just noise.
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            if Task.isCancelled { return }
+
+            var lastValue = initial
+            var stableCount = 0
+            for _ in 0..<60 {
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+                if Task.isCancelled { return }
+                guard let self else { return }
+
+                guard let current = AXTextReader.currentValue(from: snapshot) else {
+                    self.log.info(.memory, "Edit watcher: element no longer readable")
+                    return
+                }
+
+                if current != lastValue {
+                    lastValue = current
+                    stableCount = 0
+                } else {
+                    stableCount += 1
+                }
+
+                // 3 consecutive identical polls (≈3 s with no typing) AND
+                // the text actually differs from what we pasted — that's
+                // our "user finished editing" signal.
+                if stableCount >= 3 && current != initial {
+                    self.log.info(.memory, "Edit watcher fired", detail: [
+                        "chars_initial": "\(initial.count)",
+                        "chars_current": "\(current.count)"
+                    ])
+                    self.reviewPendingPaste()
+                    return
+                }
+            }
+            self?.log.info(.memory, "Edit watcher timed out (no stable edit in 60 s)")
+        }
+    }
+
+    /// Triggered either by the edit-watcher (~3 s after the user stops
+    /// typing) or as a safety net at the start of the next dictation.
+    /// Reads the current value of the focused element, diffs it, and adds
+    /// any new proper-noun-like tokens to the dictionary.
     public func reviewPendingPaste() {
+        watchTask?.cancel()
         guard let snap = pendingSnapshot else { return }
         let pasted = pendingPasteText
         pendingSnapshot = nil
