@@ -31,14 +31,17 @@ public final class UserDictionary: ObservableObject {
             self.id = try c.decode(UUID.self, forKey: .id)
             self.term = try c.decode(String.self, forKey: .term)
             self.note = try c.decodeIfPresent(String.self, forKey: .note) ?? ""
-            if let s = try c.decodeIfPresent(Origin.self, forKey: .source) {
-                self.source = s
-            } else {
-                // Legacy entry written before the `source` field existed:
-                // infer from the note prefix CorrectionLearner historically
-                // wrote ("auto-learned from edit").
-                self.source = self.note.hasPrefix("auto-learned") ? .autoLearned : .manual
-            }
+
+            // Source resolution falls back to note-prefix inference when:
+            //  - the field is absent (legacy entries written before `source`
+            //    existed), or
+            //  - the field is *present but unparseable* (a future version
+            //    added a new Origin case the user downgraded from, or the
+            //    JSON was hand-edited). We never want a single bad value
+            //    here to kill the whole dictionary load.
+            let inferred: Origin = self.note.hasPrefix("auto-learned") ? .autoLearned : .manual
+            let parsed = try? c.decodeIfPresent(Origin.self, forKey: .source)
+            self.source = parsed.flatMap { $0 } ?? inferred
         }
     }
 

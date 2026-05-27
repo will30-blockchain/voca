@@ -32,7 +32,7 @@ struct DashboardView: View {
                 statusCard
                 if missingKey { setupCard }
                 hotkeyCard
-                LearnedListCard(learner: engine.learner, store: store)
+                LearnedListCard(learner: engine.learner)
                 recentCard
             }
             .padding(.horizontal, DesignTokens.Space.xxl)
@@ -678,9 +678,13 @@ private struct EmptyState: View {
 /// Surfaces `CorrectionLearner.recent` on the Dashboard so the user can see
 /// what was auto-learned across recent dictations. Replaces the previous
 /// "only-the-5-second-toast" feedback loop, which was easy to miss.
+///
+/// `store` is bound via `@EnvironmentObject` (not a plain `let`) so the card
+/// re-renders its localized strings when the user switches UI language —
+/// a plain `let` would not subscribe to `SettingsStore`'s publishes.
 private struct LearnedListCard: View {
     @ObservedObject var learner: CorrectionLearner
-    let store: SettingsStore
+    @EnvironmentObject var store: SettingsStore
 
     static let formatter: DateFormatter = {
         let f = DateFormatter()
