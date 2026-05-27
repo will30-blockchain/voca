@@ -3,10 +3,13 @@ import SwiftUI
 import Combine
 import VOCACore
 
-/// Top-right corner toast that announces auto-learned dictionary terms.
-/// Inspired by Typeless's "Added 'Anthropic' to your dictionary" prompt.
-/// Fades in when `learner.latest` changes, auto-dismisses after 5 s, or
-/// stays around if the user hovers. Includes an Undo button.
+/// Bottom-center strip that announces auto-learned dictionary terms.
+/// Positioned in the lower-middle of the screen (above the Dock) so it
+/// shows up near where the user just edited the pasted text — the
+/// previous top-right placement was easy to miss. Inspired by Typeless's
+/// "Added 'Anthropic' to your dictionary" prompt. Fades in when
+/// `learner.latest` changes, persists for 12 s, includes an Undo button,
+/// and can be dismissed manually.
 @MainActor
 final class ToastWindowController {
     private let window: NSPanel
@@ -19,7 +22,7 @@ final class ToastWindowController {
         self.learner = learner
         self.settingsStore = settingsStore
 
-        let rect = NSRect(x: 0, y: 0, width: 320, height: 76)
+        let rect = NSRect(x: 0, y: 0, width: 380, height: 76)
         let panel = NSPanel(
             contentRect: rect,
             styleMask: [.borderless, .nonactivatingPanel],
@@ -65,9 +68,10 @@ final class ToastWindowController {
             return
         }
         slideIn()
-        // Auto-dismiss after 5 seconds.
+        // Auto-dismiss after 12 seconds. The previous 5 s window was too
+        // easy to miss when the user was mid-edit and not looking up.
         dismissTask = Task { [weak self] in
-            try? await Task.sleep(nanoseconds: 5_000_000_000)
+            try? await Task.sleep(nanoseconds: 12_000_000_000)
             guard !Task.isCancelled else { return }
             await MainActor.run {
                 self?.learner.clearLatest()
@@ -75,10 +79,10 @@ final class ToastWindowController {
         }
     }
 
-    /// Slide in from above the resting position while fading 0 → 1.
+    /// Slide up from below the resting position while fading 0 → 1.
     private func slideIn() {
         let target = restingOrigin()
-        let startOrigin = NSPoint(x: target.x, y: target.y + 18)
+        let startOrigin = NSPoint(x: target.x, y: target.y - 18)
 
         window.alphaValue = 0
         var startFrame = window.frame
@@ -97,7 +101,7 @@ final class ToastWindowController {
     }
 
     private func slideOut() {
-        let endY = window.frame.origin.y + 14
+        let endY = window.frame.origin.y - 14
         NSAnimationContext.runAnimationGroup({ ctx in
             ctx.duration = 0.22
             ctx.timingFunction = CAMediaTimingFunction(name: .easeIn)
@@ -115,9 +119,11 @@ final class ToastWindowController {
         guard let screen else { return .zero }
         let visible = screen.visibleFrame
         let size = window.frame.size
+        // Bottom-center: centred horizontally, sitting 32 pt above the
+        // Dock (visibleFrame.minY already excludes the Dock area).
         return NSPoint(
-            x: visible.maxX - size.width - 16,
-            y: visible.maxY - size.height - 16
+            x: visible.midX - size.width / 2,
+            y: visible.minY + 32
         )
     }
 }

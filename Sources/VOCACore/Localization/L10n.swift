@@ -192,7 +192,13 @@ public enum L10n: String, CaseIterable, Sendable {
     case dictionaryEntriesSection
     case dictionaryColTerm
     case dictionaryColNote
+    case dictionaryColSource
     case dictionaryRemoveSelected
+    case dictionaryFilterAll
+    case dictionaryFilterAuto
+    case dictionaryFilterManual
+    case dictionarySourceAuto
+    case dictionarySourceManual
 
     // MARK: - Memory settings
     case memorySubtitle
@@ -228,6 +234,13 @@ public enum L10n: String, CaseIterable, Sendable {
     case aboutSupportSection
     case aboutSupportFooter
     case aboutSupportEmailLabel
+
+    // MARK: - Recently learned (Dashboard)
+    case learnedTitle
+    case learnedEmptyTitle
+    case learnedEmpty
+    case learnedRemove
+    case learnedFooterHint
 
     public func text(_ language: AppLanguage) -> String {
         switch language {
@@ -374,7 +387,13 @@ public enum L10n: String, CaseIterable, Sendable {
         .dictionaryEntriesSection: "Entries",
         .dictionaryColTerm: "Term",
         .dictionaryColNote: "Note",
+        .dictionaryColSource: "Source",
         .dictionaryRemoveSelected: "Remove selected",
+        .dictionaryFilterAll: "All",
+        .dictionaryFilterAuto: "Auto",
+        .dictionaryFilterManual: "Manual",
+        .dictionarySourceAuto: "Auto-learned",
+        .dictionarySourceManual: "Manual",
 
         .memorySubtitle: "Background context VOCA appends to the LLM editor. The more specific the better — name, role, projects, recurring people.",
         .memoryFactsSection: "Personal facts",
@@ -406,7 +425,13 @@ public enum L10n: String, CaseIterable, Sendable {
         .aboutStorageFooter: "Settings, dictionary, and personal memory are persisted as JSON.",
         .aboutSupportSection: "Support development",
         .aboutSupportFooter: "VOCA is maintained in spare time. Tips go toward Apple Developer fees and API credits used during testing. Select any address to copy.",
-        .aboutSupportEmailLabel: "Email"
+        .aboutSupportEmailLabel: "Email",
+
+        .learnedTitle: "Recently learned",
+        .learnedEmptyTitle: "Nothing learned yet",
+        .learnedEmpty: "Edit a pasted transcript and VOCA will pick up the new proper nouns on your next dictation. They appear here.",
+        .learnedRemove: "Remove",
+        .learnedFooterHint: "Listed terms are also in your dictionary. Removing a row deletes it from both."
     ]
 
     // MARK: - 繁體中文
@@ -547,7 +572,13 @@ public enum L10n: String, CaseIterable, Sendable {
         .dictionaryEntriesSection: "已加入的詞彙",
         .dictionaryColTerm: "詞彙",
         .dictionaryColNote: "註記",
+        .dictionaryColSource: "來源",
         .dictionaryRemoveSelected: "移除選取",
+        .dictionaryFilterAll: "全部",
+        .dictionaryFilterAuto: "自動學到",
+        .dictionaryFilterManual: "手動新增",
+        .dictionarySourceAuto: "自動學到",
+        .dictionarySourceManual: "手動",
 
         .memorySubtitle: "VOCA 會把這些背景資訊附加給 LLM 編輯器，越具體越好 — 名字、角色、進行中的專案、常出現的人。",
         .memoryFactsSection: "個人資料",
@@ -579,6 +610,12 @@ public enum L10n: String, CaseIterable, Sendable {
         .aboutStorageFooter: "設定、字典、個人記憶都以 JSON 儲存在本機。",
         .aboutSupportSection: "贊助開發",
         .aboutSupportFooter: "VOCA 在業餘時間維護，贊助會用在 Apple 開發者年費與測試時的 API 額度。點選地址即可複製。",
-        .aboutSupportEmailLabel: "聯絡信箱"
+        .aboutSupportEmailLabel: "聯絡信箱",
+
+        .learnedTitle: "最近學到的詞",
+        .learnedEmptyTitle: "還沒學到新詞",
+        .learnedEmpty: "編輯剛貼上的文字後，下次錄音時 VOCA 會把新出現的專有名詞加進字典，並列在這裡。",
+        .learnedRemove: "移除",
+        .learnedFooterHint: "這些詞同時存在於字典裡。移除一筆，會同時從字典刪掉。"
     ]
 }

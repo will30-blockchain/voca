@@ -32,6 +32,7 @@ struct DashboardView: View {
                 statusCard
                 if missingKey { setupCard }
                 hotkeyCard
+                LearnedListCard(learner: engine.learner, store: store)
                 recentCard
             }
             .padding(.horizontal, DesignTokens.Space.xxl)
@@ -669,6 +670,82 @@ private struct EmptyState: View {
         .padding(.vertical, DesignTokens.Space.md)
         .background(
             RoundedRectangle(cornerRadius: DesignTokens.Radius.md, style: .continuous)
+                .fill(DesignTokens.Color.surfaceSunken)
+        )
+    }
+}
+
+/// Surfaces `CorrectionLearner.recent` on the Dashboard so the user can see
+/// what was auto-learned across recent dictations. Replaces the previous
+/// "only-the-5-second-toast" feedback loop, which was easy to miss.
+private struct LearnedListCard: View {
+    @ObservedObject var learner: CorrectionLearner
+    let store: SettingsStore
+
+    static let formatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateStyle = .none
+        f.timeStyle = .short
+        return f
+    }()
+
+    var body: some View {
+        Card {
+            VStack(alignment: .leading, spacing: DesignTokens.Space.md) {
+                SectionTitle(store.t(.learnedTitle))
+                if learner.recent.isEmpty {
+                    EmptyState(
+                        icon: "sparkles",
+                        title: store.t(.learnedEmptyTitle),
+                        message: store.t(.learnedEmpty)
+                    )
+                } else {
+                    VStack(spacing: DesignTokens.Space.sm) {
+                        ForEach(learner.recent.prefix(12)) { entry in
+                            row(for: entry)
+                        }
+                    }
+                    Text(store.t(.learnedFooterHint))
+                        .font(DesignTokens.Typography.caption)
+                        .vtTertiaryText()
+                }
+            }
+        }
+    }
+
+    private func row(for entry: CorrectionLearner.LearnedTerm) -> some View {
+        HStack(alignment: .center, spacing: DesignTokens.Space.md) {
+            Image(systemName: "sparkles")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(DesignTokens.Color.accent)
+                .frame(width: 24, height: 24)
+                .background(Circle().fill(DesignTokens.Color.accentTint))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(entry.term)
+                    .font(DesignTokens.Typography.bodyEmphasis)
+                    .vtPrimaryText()
+                    .lineLimit(1)
+                Text(Self.formatter.string(from: entry.learnedAt))
+                    .font(DesignTokens.Typography.caption)
+                    .vtTertiaryText()
+            }
+            Spacer(minLength: DesignTokens.Space.sm)
+            Button {
+                learner.remove(id: entry.id)
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 11, weight: .semibold))
+                    .vtTertiaryText()
+                    .frame(width: 22, height: 22)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.borderless)
+            .help(store.t(.learnedRemove))
+        }
+        .padding(DesignTokens.Space.md)
+        .background(
+            RoundedRectangle(cornerRadius: DesignTokens.Radius.sm, style: .continuous)
                 .fill(DesignTokens.Color.surfaceSunken)
         )
     }

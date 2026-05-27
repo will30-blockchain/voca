@@ -4,15 +4,41 @@ import Foundation
 /// the STT prompt and the LLM refinement. Persisted to disk as JSON.
 @MainActor
 public final class UserDictionary: ObservableObject {
+    public enum Origin: String, Codable, Sendable, CaseIterable {
+        case manual
+        case autoLearned = "auto_learned"
+    }
+
     public struct Entry: Codable, Sendable, Hashable, Identifiable {
         public var id: UUID
         public var term: String
         public var note: String
+        public var source: Origin
 
-        public init(id: UUID = UUID(), term: String, note: String = "") {
+        public init(id: UUID = UUID(), term: String, note: String = "", source: Origin = .manual) {
             self.id = id
             self.term = term
             self.note = note
+            self.source = source
+        }
+
+        private enum CodingKeys: String, CodingKey {
+            case id, term, note, source
+        }
+
+        public init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            self.id = try c.decode(UUID.self, forKey: .id)
+            self.term = try c.decode(String.self, forKey: .term)
+            self.note = try c.decodeIfPresent(String.self, forKey: .note) ?? ""
+            if let s = try c.decodeIfPresent(Origin.self, forKey: .source) {
+                self.source = s
+            } else {
+                // Legacy entry written before the `source` field existed:
+                // infer from the note prefix CorrectionLearner historically
+                // wrote ("auto-learned from edit").
+                self.source = self.note.hasPrefix("auto-learned") ? .autoLearned : .manual
+            }
         }
     }
 
@@ -46,11 +72,11 @@ public final class UserDictionary: ObservableObject {
         }
     }
 
-    public func add(_ term: String, note: String = "") {
+    public func add(_ term: String, note: String = "", source: Origin = .manual) {
         let t = term.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !t.isEmpty else { return }
         if entries.contains(where: { $0.term.caseInsensitiveCompare(t) == .orderedSame }) { return }
-        entries.append(Entry(term: t, note: note))
+        entries.append(Entry(term: t, note: note, source: source))
         save()
     }
 

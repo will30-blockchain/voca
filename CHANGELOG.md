@@ -6,6 +6,28 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Auto-learn visibility (was practically invisible before)
+
+- **Bottom-center toast (was top-right)** — when an edit triggers an
+  auto-learn, the "X added to dictionary" strip now appears bottom-centre
+  and stays for **12 seconds** (was 5). The previous placement was easy
+  to miss when the user was looking at the field they just edited.
+- **Dashboard → "Recently learned" card** — surfaces
+  `CorrectionLearner.recent` as a scrollable list of recently auto-added
+  terms. Each row has a one-click remove that also deletes the matching
+  dictionary entry. Empty state explains the edit-then-redictate flow.
+- **Dictionary settings → source filter** — segmented control "All /
+  Auto / Manual" so the user can review only the terms VOCA learned on
+  its own. New `Source` column shows a `sparkles` icon for auto-learned
+  rows and a `pencil` for manual rows (mirrors Typeless's auto/manual
+  distinction).
+- `UserDictionary.Entry` gains a `source: Origin` field
+  (`manual` / `autoLearned`). Backward-compatible decoder infers the
+  source from legacy entries' note prefix.
+- `CorrectionLearner.remove(id:)` deletes a learned entry *and* the
+  paired dictionary row so removing from one place actually stops the
+  term from biasing future dictations.
+
 ### Added
 
 - `SECURITY.md` — vulnerability disclosure policy, in-scope vs out-of-scope

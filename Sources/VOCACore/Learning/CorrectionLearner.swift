@@ -95,7 +95,7 @@ public final class CorrectionLearner: ObservableObject {
 
         let contextHint = String(pasted.prefix(60))
         for term in report.candidates {
-            dictionary.add(term, note: "auto-learned from edit")
+            dictionary.add(term, note: "auto-learned from edit", source: .autoLearned)
             let entry = LearnedTerm(term: term, contextHint: contextHint)
             recent.insert(entry, at: 0)
             latest = entry
@@ -105,6 +105,20 @@ public final class CorrectionLearner: ObservableObject {
             ])
         }
         recent = Array(recent.prefix(50))
+    }
+
+    /// Remove a specific auto-learned entry — also deletes the matching
+    /// dictionary row so the term stops biasing future STT/LLM calls.
+    public func remove(id: UUID) {
+        guard let entry = recent.first(where: { $0.id == id }) else { return }
+        if let dictEntry = dictionary.entries.first(where: {
+            $0.term.caseInsensitiveCompare(entry.term) == .orderedSame
+        }) {
+            dictionary.remove(ids: [dictEntry.id])
+        }
+        recent.removeAll { $0.id == id }
+        if latest?.id == id { latest = nil }
+        log.info(.memory, "Removed auto-learned term", detail: ["term": entry.term])
     }
 
     /// User dismissed the toast / wants to undo the last auto-learn.

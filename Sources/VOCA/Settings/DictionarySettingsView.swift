@@ -7,6 +7,22 @@ struct DictionarySettingsView: View {
     @State private var newTerm: String = ""
     @State private var newNote: String = ""
     @State private var selection = Set<UUID>()
+    @State private var filter: SourceFilter = .all
+
+    /// Local filter selector — kept separate from `UserDictionary.Origin`
+    /// so the `.all` "no filter" case has somewhere clean to live.
+    private enum SourceFilter: String, CaseIterable, Identifiable {
+        case all, auto, manual
+        var id: String { rawValue }
+    }
+
+    private var filteredEntries: [UserDictionary.Entry] {
+        switch filter {
+        case .all: return dictionary.entries
+        case .auto: return dictionary.entries.filter { $0.source == .autoLearned }
+        case .manual: return dictionary.entries.filter { $0.source == .manual }
+        }
+    }
 
     var body: some View {
         SettingsPage(
@@ -62,13 +78,31 @@ struct DictionarySettingsView: View {
                 SectionTitle(
                     store.t(.dictionaryEntriesSection),
                     trailing: AnyView(
-                        Text("\(dictionary.entries.count)")
+                        Text("\(filteredEntries.count) / \(dictionary.entries.count)")
                             .font(DesignTokens.Typography.captionEmphasis)
                             .vtTertiaryText()
                     )
                 )
 
-                Table(dictionary.entries, selection: $selection) {
+                Picker("", selection: $filter) {
+                    Text(store.t(.dictionaryFilterAll)).tag(SourceFilter.all)
+                    Text(store.t(.dictionaryFilterAuto)).tag(SourceFilter.auto)
+                    Text(store.t(.dictionaryFilterManual)).tag(SourceFilter.manual)
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .onChange(of: filter) { _, _ in
+                    // Filtering can hide currently-selected rows; clear
+                    // selection so the Remove button doesn't act on
+                    // invisible entries.
+                    selection.removeAll()
+                }
+
+                Table(filteredEntries, selection: $selection) {
+                    TableColumn(store.t(.dictionaryColSource)) { entry in
+                        sourceBadge(for: entry.source)
+                    }
+                    .width(min: 38, ideal: 48, max: 56)
                     TableColumn(store.t(.dictionaryColTerm)) { entry in
                         TextField("", text: Binding(
                             get: { entry.term },
@@ -117,6 +151,22 @@ struct DictionarySettingsView: View {
                     Spacer()
                 }
             }
+        }
+    }
+
+    @ViewBuilder
+    private func sourceBadge(for source: UserDictionary.Origin) -> some View {
+        switch source {
+        case .autoLearned:
+            Image(systemName: "sparkles")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(DesignTokens.Color.accent)
+                .help(store.t(.dictionarySourceAuto))
+        case .manual:
+            Image(systemName: "pencil")
+                .font(.system(size: 12, weight: .regular))
+                .vtTertiaryText()
+                .help(store.t(.dictionarySourceManual))
         }
     }
 
