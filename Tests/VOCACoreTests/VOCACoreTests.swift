@@ -54,16 +54,36 @@ final class VOCACoreTests: XCTestCase {
     }
 
     /// Regression: the LLM editor must drop the spoken enumeration cue
-    /// and render each item as a numbered list.
+    /// and render each item as a numbered list — even when only ONE cue
+    /// appears (no preceding "Firstly"). User-reported case: an email
+    /// containing only "Secondly" came back as flowing prose.
     func testRefinementPromptCoversEnumeratedLists() {
         let prompt = RefinementPrompts.system(
             tone: "natural", glossary: [], memoryPhrases: [],
             personalFacts: "", detectedLanguage: nil
         )
-        XCTAssertTrue(prompt.contains("第一點") || prompt.contains("一 / 二 / 三"),
-                      "Expected Chinese enumeration cues")
-        XCTAssertTrue(prompt.contains("1.") || prompt.lowercased().contains("numbered list"),
-                      "Expected the rendered numbered-list format")
+        XCTAssertTrue(prompt.contains("第一點") && prompt.contains("再來"),
+                      "Expected Chinese enumeration cues including 再來")
+        XCTAssertTrue(prompt.lowercased().contains("a single one is enough") ||
+                      prompt.contains("single one is enough"),
+                      "Single-cue triggering must be explicit in the prompt")
+        XCTAssertTrue(prompt.contains("Secondly") && prompt.contains("scan back"),
+                      "Expected the 'scan back for implied first item' instruction")
+    }
+
+    /// Regression: the email-shape rule must recognise a trailing
+    /// "thank you" / "謝謝" as a sign-off and pull it onto its own line,
+    /// not leave it glued to the last body sentence.
+    func testRefinementPromptCoversTrailingThanksSignOff() {
+        let prompt = RefinementPrompts.system(
+            tone: "natural", glossary: [], memoryPhrases: [],
+            personalFacts: "", detectedLanguage: nil
+        )
+        XCTAssertTrue(prompt.contains("thank you") && prompt.contains("謝謝"),
+                      "Expected polite-thanks sign-off variants")
+        XCTAssertTrue(prompt.contains("its own sign-off line") ||
+                      prompt.contains("pulled out as its own sign-off line"),
+                      "Prompt must instruct lifting trailing thanks onto its own line")
     }
 
     /// Regression: when the speaker corrects themselves (A→B), only B

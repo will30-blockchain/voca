@@ -76,24 +76,58 @@ public enum RefinementPrompts {
               7. Honour explicit voice commands like "new line", "new paragraph", \
                  "comma", "period", "question mark" — replace them with the \
                  actual punctuation/whitespace.
-              8. Email shape: if the transcript opens with a greeting ("Hi X", \
-                 "Hello team", "Dear X", 「嗨」, 「親愛的 X」, etc.) AND ends \
-                 with a sign-off ("Best", "Regards", "Sincerely", "Cheers", \
-                 「謝謝」, 「祝好」, 「敬上」, 「順頌時祺」), lay it out as an \
-                 email: greeting on its own line, blank line, body paragraphs \
-                 separated by blank lines, blank line, sign-off (and the \
-                 speaker's name if spoken) on its own line. If only one of \
-                 the two signals is present, treat it as regular prose.
-              9. Enumerated lists: when the speaker explicitly enumerates with \
-                 cues like "first / second / third", "一 / 二 / 三", \
-                 「第一點 / 第二點 / 第三點」, "首先 / 其次 / 最後", \
-                 "1 / 2 / 3", render each item on its own line as a numbered \
-                 list ("1. …", "2. …"). DROP the spoken cue itself — the \
-                 number prefix replaces it (so 「第一點，我覺得…」 becomes \
-                 "1. 我覺得…"). For unordered cues ("bullet point", \
-                 「項目」, "another thing is…"), use "- " bullets instead. \
-                 When the enumeration is conversational ("first off, I \
-                 think…") rather than structural, keep flowing prose.
+              8. Email shape: if the transcript opens with a greeting \
+                 ("Hi X", "Hello team", "Dear X", "Hey", 「嗨」, \
+                 「親愛的 X」, 「您好」) AND ends with ANY of these sign-off \
+                 signals — explicit closings ("Best", "Regards", \
+                 "Sincerely", "Cheers", 「祝好」, 「敬上」, 「順頌時祺」), \
+                 polite thanks at the end of the last sentence \
+                 ("thank you", "thanks", "many thanks", "thanks a lot", \
+                 「謝謝」, 「感謝」), or a final wish/farewell \
+                 (「再見」, "take care") — lay it out as an email:
+                     <Greeting line>
+                     <blank line>
+                     <Body paragraphs, each separated by a blank line>
+                     <blank line>
+                     <Sign-off on its own line, even if the speaker said it \
+                       inline at the end of a sentence>
+                     <Speaker's name on its own line (if spoken)>
+                 IMPORTANT: trailing "thank you" / 「謝謝」 in the last \
+                 sentence ALWAYS gets pulled out as its own sign-off line — \
+                 do not leave it glued to the previous sentence. If neither \
+                 signal is present, treat as regular prose.
+              9. Enumerated lists. The speaker is enumerating whenever ANY \
+                 of these cues appears — a single one is enough, you do NOT \
+                 need to see "first" before "second":
+                     English: first / firstly, second / secondly, third / \
+                              thirdly, fourth, finally, lastly, "next point", \
+                              "another thing", "another point is", \
+                              "and another"
+                     Chinese: 第一點 / 第二點 / 第三點, 首先 / 其次 / 再來 / \
+                              接著 / 另外 / 最後, 一 / 二 / 三 (as ordinals), \
+                              一個…另一個 (as enumeration), 還有一個
+                     Spoken digits: "one… two… three" when used as ordinals.
+                 When you see ANY cue, scan back for the implied first item: \
+                 the immediately preceding paragraph (or sentence) becomes \
+                 item 1, the cued segment becomes item 2, etc. Render each \
+                 item on its OWN line with "1. " / "2. " prefixes. DROP the \
+                 cue word itself — the number prefix replaces it.
+                 Worked example (single "Secondly" trigger):
+                     SPOKEN:  "Hi team. We are preparing the AI Wave Show \
+                              on June 30, the video script is being drafted. \
+                              Secondly, do you have new slides? Thanks."
+                     OUTPUT:
+                              Hi team,
+
+                              1. We are preparing the AI Wave Show on June \
+                              30, the video script is being drafted.
+                              2. Do you have new slides?
+
+                              Thanks.
+                 For unordered cues ("bullet point", 「項目」), use "- " \
+                 bullets instead. The only enumeration cue that does NOT \
+                 trigger listing is bare "first off" / "first of all" used \
+                 as a single-shot discourse opener with no follow-up cue.
              10. Keep the speaker's style and register. Tone target: \(tone).
              11. Output the cleaned text ONLY — no preamble, no surrounding \
                  quotes, no markdown code fences. Newlines, paragraph breaks, \
