@@ -238,4 +238,84 @@ final class VOCACoreTests: XCTestCase {
                        simplified.contains("not translate")),
                       "zh-Hans rule must explicitly preserve English words")
     }
+
+    // MARK: - CorrectionDiff CJK character-level learning
+
+    /// Two-character Chinese word with ONE character changed. The
+    /// previous word-level diff produced 0 overlap and learned nothing.
+    /// The character-level supplement should now catch the corrected
+    /// word.
+    func testCorrectionDiffLearnsSingleCharEditInTwoCharCJKWord() {
+        let report = CorrectionDiff.newCandidates(
+            originalPaste: "我覺得資訊很重要",
+            currentText: "我覺得資料很重要",
+            existingDictionary: [],
+            existingMemory: []
+        )
+        XCTAssertTrue(report.candidates.contains("資料"),
+                      "Expected '資料' to be learned; got \(report.candidates)")
+    }
+
+    /// Both characters of a two-character word changed (polyphone /
+    /// homophone confusion).
+    func testCorrectionDiffLearnsTwoCharEditInCJKWord() {
+        let report = CorrectionDiff.newCandidates(
+            originalPaste: "我要去宜灣",
+            currentText: "我要去台灣",
+            existingDictionary: [],
+            existingMemory: []
+        )
+        XCTAssertTrue(report.candidates.contains("台灣"),
+                      "Expected '台灣' from two-char fix; got \(report.candidates)")
+    }
+
+    /// Proper noun (three-character person name) with one character
+    /// wrong. Expansion should grab at least 「依文」, ideally 「陳依文」.
+    func testCorrectionDiffLearnsCharChangeInProperNoun() {
+        let report = CorrectionDiff.newCandidates(
+            originalPaste: "我叫陳一文",
+            currentText: "我叫陳依文",
+            existingDictionary: [],
+            existingMemory: []
+        )
+        XCTAssertTrue(
+            report.candidates.contains("陳依文") || report.candidates.contains("依文"),
+            "Expected '陳依文' or '依文' from name fix; got \(report.candidates)"
+        )
+    }
+
+    /// Nothing changed — no candidates.
+    func testCorrectionDiffSkipsWhenNothingChanged() {
+        let report = CorrectionDiff.newCandidates(
+            originalPaste: "你好世界",
+            currentText: "你好世界",
+            existingDictionary: [],
+            existingMemory: []
+        )
+        XCTAssertEqual(report.candidates, [])
+    }
+
+    /// Already-known terms must not be re-added.
+    func testCorrectionDiffSkipsTermsAlreadyInDictionary() {
+        let report = CorrectionDiff.newCandidates(
+            originalPaste: "我覺得資訊很重要",
+            currentText: "我覺得資料很重要",
+            existingDictionary: ["資料"],
+            existingMemory: []
+        )
+        XCTAssertFalse(report.candidates.contains("資料"))
+    }
+
+    /// Wholesale rewrite (> 50% character change) must NOT spray random
+    /// 6-char snippets into the dictionary.
+    func testCorrectionDiffBailsOnWholesaleRewrite() {
+        let report = CorrectionDiff.newCandidates(
+            originalPaste: "你好",
+            currentText: "完全不同的句子",
+            existingDictionary: [],
+            existingMemory: []
+        )
+        XCTAssertEqual(report.candidates, [],
+                       "Wholesale rewrite should NOT produce candidates")
+    }
 }

@@ -1,4 +1,5 @@
 import Foundation
+import NaturalLanguage
 
 /// Pure logic for "what did the user change after we pasted?" — used by
 /// CorrectionLearner to extract proper-noun-like edits and add them to
@@ -19,6 +20,15 @@ public enum CorrectionDiff {
     ///     field, so a diff would be garbage), or
     ///   - the candidate list explodes past `maxAdds` (defensive cap), or
     ///   - the user simply didn't edit.
+    ///
+    /// Runs TWO diff passes:
+    ///   - Word-level LCS: catches whole-token edits well, especially for
+    ///     space-separated languages like English.
+    ///   - CJK character-level diff: required because Chinese text
+    ///     tokenises as one giant CJK run — any single-character edit
+    ///     would make the entire token "different" at the word level and
+    ///     we'd never learn from it. This pass identifies edited character
+    ///     spans and expands them outward to capture the surrounding word.
     public static func newCandidates(
         originalPaste: String,
         currentText: String,
@@ -35,24 +45,45 @@ public enum CorrectionDiff {
         let (lcsLen, added) = lcsDiff(original, current)
         let overlap = Double(lcsLen) / Double(original.count)
 
-        // Below 0.4 the diff is unreliable — likely the user clicked into a
-        // completely different field between paste and the time we read.
-        guard overlap >= 0.4 else {
-            return Report(candidates: [], overlap: overlap)
-        }
-
         let dictLowercased = Set(existingDictionary.map { $0.lowercased() })
         let memLowercased = Set(existingMemory.map { $0.lowercased() })
 
         var seen = Set<String>()
         var result: [String] = []
-        for token in added {
-            guard result.count < maxAdds else { break }
-            let key = token.lowercased()
-            if seen.contains(key) { continue }
-            guard isCandidateTerm(token, existingDict: dictLowercased, existingMemory: memLowercased) else { continue }
-            seen.insert(key)
-            result.append(token)
+
+        // Pass 1: word-level. Below 0.4 overlap the word diff is unreliable
+        // (likely a different field) — but CJK char-level still runs, since
+        // a Chinese edit naturally produces 0 word overlap.
+        if overlap >= 0.4 {
+            for token in added {
+                guard result.count < maxAdds else { break }
+                let key = token.lowercased()
+                if seen.contains(key) { continue }
+                guard isCandidateTerm(token, existingDict: dictLowercased, existingMemory: memLowercased) else { continue }
+                seen.insert(key)
+                result.append(token)
+            }
+        }
+
+        // Pass 2: CJK character-level supplement. Catches edits like:
+        //   「資訊」→「資料」    (one char changed in a 2-char word)
+        //   「宜灣」→「台灣」    (both chars changed)
+        //   「陳一文」→「陳依文」 (one char changed in a 3-char proper noun)
+        if result.count < maxAdds {
+            let extras = cjkCharacterLevelCandidates(
+                original: originalPaste,
+                current: currentText,
+                existingDict: dictLowercased,
+                existingMemory: memLowercased,
+                maxAdds: maxAdds - result.count
+            )
+            for term in extras {
+                if result.count >= maxAdds { break }
+                let key = term.lowercased()
+                if seen.contains(key) { continue }
+                seen.insert(key)
+                result.append(term)
+            }
         }
 
         // If we'd add a *ton* of things, the diff is suspect — drop everything.
@@ -60,6 +91,170 @@ public enum CorrectionDiff {
             return Report(candidates: [], overlap: overlap)
         }
         return Report(candidates: result, overlap: overlap)
+    }
+
+    // MARK: - CJK character-level diff
+
+    /// Identifies CJK words in `current` that contain at least one edited
+    /// character relative to `original`. Required because Chinese /
+    /// Japanese / Korean don't use spaces, so a small word edit looks
+    /// like a giant token replacement to the word-level LCS pass.
+    ///
+    /// Two-pass strategy:
+    ///   1. PRIMARY — character-level LCS finds changed positions;
+    ///      `NLTokenizer` (with dominant-language hint) segments
+    ///      `current` into proper words; any 2+ char pure-CJK word that
+    ///      overlaps the changed set is a candidate. Catches the common
+    ///      case "X X 資訊 X X" → "X X 資料 X X" → learn 「資料」.
+    ///   2. FALLBACK — if NLTokenizer over-segments (it often splits
+    ///      proper nouns into single chars), expand each changed CJK
+    ///      position outward by one char on each side. Tight cap of
+    ///      3 chars total per window keeps noise low while still
+    ///      capturing 2-3 char names like 「陳依文」 or 「依文」.
+    ///
+    /// Conservative guards on both passes:
+    ///   - Bails on inputs > 2,000 chars (DP would get expensive and a
+    ///     paste that long was probably a doc dump, not a dictation).
+    ///   - Bails when more than 50% of `current` characters differ —
+    ///     that's a rewrite, not a correction.
+    ///   - Words mixing CJK with Latin are skipped (the word-level pass
+    ///     handles Latin).
+    static func cjkCharacterLevelCandidates(
+        original: String,
+        current: String,
+        existingDict: Set<String>,
+        existingMemory: Set<String>,
+        maxAdds: Int
+    ) -> [String] {
+        let orig = Array(original)
+        let curr = Array(current)
+        guard !orig.isEmpty, !curr.isEmpty else { return [] }
+        guard orig.count <= 2_000, curr.count <= 2_000 else { return [] }
+
+        let changedIdxs = changedPositionsInCurrent(orig: orig, curr: curr)
+        guard !changedIdxs.isEmpty else { return [] }
+
+        let changeRatio = Double(changedIdxs.count) / Double(curr.count)
+        guard changeRatio < 0.5 else { return [] }
+
+        let changedSet = Set(changedIdxs)
+
+        // PRIMARY pass: NLTokenizer word-aligned candidates.
+        let tokenizer = NLTokenizer(unit: .word)
+        if let lang = NLLanguageRecognizer.dominantLanguage(for: current) {
+            tokenizer.setLanguage(lang)
+        }
+        tokenizer.string = current
+
+        var seen = Set<String>()
+        var candidates: [String] = []
+        tokenizer.enumerateTokens(in: current.startIndex..<current.endIndex) { range, _ in
+            if candidates.count >= maxAdds { return false }
+
+            let word = String(current[range])
+            guard word.count >= 2 else { return true }
+            guard word.allSatisfy({ isCJKChar($0) }) else { return true }
+
+            let lower = word.lowercased()
+            if existingDict.contains(lower) { return true }
+            if existingMemory.contains(lower) { return true }
+            if seen.contains(lower) { return true }
+
+            // Char-position range of this NLTokenizer word in `current`.
+            let startIdx = current.distance(from: current.startIndex, to: range.lowerBound)
+            let endIdx = current.distance(from: current.startIndex, to: range.upperBound)
+            let overlapsChange = (startIdx..<endIdx).contains(where: { changedSet.contains($0) })
+            guard overlapsChange else { return true }
+
+            seen.insert(lower)
+            candidates.append(word)
+            return true
+        }
+
+        if !candidates.isEmpty { return candidates }
+
+        // FALLBACK pass: NLTokenizer over-segmented (often happens with
+        // proper nouns like person names). Expand around each changed
+        // CJK position to capture a 2-3 char window.
+        var spansSeen = Set<Range<Int>>()
+        for idx in changedIdxs {
+            if candidates.count >= maxAdds { break }
+            guard idx < curr.count, isCJKChar(curr[idx]) else { continue }
+
+            var start = idx
+            var end = idx + 1
+            if start > 0, isCJKChar(curr[start - 1]) { start -= 1 }
+            if end < curr.count, isCJKChar(curr[end]) { end += 1 }
+
+            // Need at least 2 CJK chars; if only the centre is CJK and
+            // both neighbours are non-CJK, skip.
+            guard (end - start) >= 2 else { continue }
+
+            let range = start..<end
+            if spansSeen.contains(range) { continue }
+            spansSeen.insert(range)
+
+            let word = String(curr[start..<end])
+            let lower = word.lowercased()
+            if existingDict.contains(lower) || existingMemory.contains(lower) { continue }
+            if seen.contains(lower) { continue }
+            seen.insert(lower)
+            candidates.append(word)
+        }
+        return candidates
+    }
+
+    /// Standard LCS-DP backtrack, returning the indices in `curr` that
+    /// are NOT part of the longest common subsequence (i.e. the positions
+    /// the user inserted or substituted).
+    static func changedPositionsInCurrent(orig: [Character], curr: [Character]) -> [Int] {
+        let m = orig.count
+        let n = curr.count
+        if m == 0 { return Array(0..<n) }
+        if n == 0 { return [] }
+
+        var dp = Array(repeating: Array(repeating: 0, count: n + 1), count: m + 1)
+        for i in 1...m {
+            for j in 1...n {
+                if orig[i - 1] == curr[j - 1] {
+                    dp[i][j] = dp[i - 1][j - 1] + 1
+                } else {
+                    dp[i][j] = max(dp[i - 1][j], dp[i][j - 1])
+                }
+            }
+        }
+
+        var i = m, j = n
+        var matched = Set<Int>()
+        while i > 0, j > 0 {
+            if orig[i - 1] == curr[j - 1] {
+                matched.insert(j - 1)
+                i -= 1; j -= 1
+            } else if dp[i - 1][j] >= dp[i][j - 1] {
+                i -= 1
+            } else {
+                j -= 1
+            }
+        }
+
+        var result: [Int] = []
+        result.reserveCapacity(n - matched.count)
+        for k in 0..<n where !matched.contains(k) {
+            result.append(k)
+        }
+        return result
+    }
+
+    private static func isCJKChar(_ c: Character) -> Bool {
+        for scalar in c.unicodeScalars {
+            let v = scalar.value
+            if (0x4E00...0x9FFF).contains(v) ||
+               (0x3040...0x30FF).contains(v) ||
+               (0xAC00...0xD7AF).contains(v) {
+                return true
+            }
+        }
+        return false
     }
 
     // MARK: - Tokenisation
