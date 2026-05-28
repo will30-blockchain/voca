@@ -38,6 +38,60 @@ final class VOCACoreTests: XCTestCase {
         XCTAssertTrue(prompt.contains("Tokyo"))
     }
 
+    // MARK: - Refinement prompt smart-formatting rules
+
+    /// Regression: the LLM editor must be told to recognise the
+    /// greeting + sign-off pattern and lay the output out as an email.
+    func testRefinementPromptCoversEmailShape() {
+        let prompt = RefinementPrompts.system(
+            tone: "natural", glossary: [], memoryPhrases: [],
+            personalFacts: "", detectedLanguage: nil
+        )
+        XCTAssertTrue(prompt.lowercased().contains("email"),
+                      "Expected the prompt to explicitly mention email layout")
+        XCTAssertTrue(prompt.contains("sign-off") || prompt.contains("敬上"),
+                      "Expected a concrete sign-off cue (English or Chinese)")
+    }
+
+    /// Regression: the LLM editor must drop the spoken enumeration cue
+    /// and render each item as a numbered list.
+    func testRefinementPromptCoversEnumeratedLists() {
+        let prompt = RefinementPrompts.system(
+            tone: "natural", glossary: [], memoryPhrases: [],
+            personalFacts: "", detectedLanguage: nil
+        )
+        XCTAssertTrue(prompt.contains("第一點") || prompt.contains("一 / 二 / 三"),
+                      "Expected Chinese enumeration cues")
+        XCTAssertTrue(prompt.contains("1.") || prompt.lowercased().contains("numbered list"),
+                      "Expected the rendered numbered-list format")
+    }
+
+    /// Regression: when the speaker corrects themselves (A→B), only B
+    /// should survive in the output.
+    func testRefinementPromptCoversSelfCorrection() {
+        let prompt = RefinementPrompts.system(
+            tone: "natural", glossary: [], memoryPhrases: [],
+            personalFacts: "", detectedLanguage: nil
+        )
+        XCTAssertTrue(prompt.lowercased().contains("self-correction") ||
+                      prompt.contains("不對") ||
+                      prompt.contains("應該說"),
+                      "Expected self-correction handling to be in the prompt")
+        XCTAssertTrue(prompt.contains("scratch that") || prompt.contains("我講錯"),
+                      "Expected a concrete self-correction marker")
+    }
+
+    /// Regression: filler-word filtering should cover both English and
+    /// Chinese disfluencies.
+    func testRefinementPromptCoversChineseFillers() {
+        let prompt = RefinementPrompts.system(
+            tone: "natural", glossary: [], memoryPhrases: [],
+            personalFacts: "", detectedLanguage: nil
+        )
+        XCTAssertTrue(prompt.contains("那個") || prompt.contains("就是"),
+                      "Expected Chinese filler-word examples")
+    }
+
     // MARK: - UserDictionary.Entry source-field migration
 
     /// Pre-2026-05-28 dictionary entries had no `source` field. The decoder
