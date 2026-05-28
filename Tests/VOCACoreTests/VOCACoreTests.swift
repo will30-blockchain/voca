@@ -168,4 +168,39 @@ final class VOCACoreTests: XCTestCase {
         XCTAssertEqual(TextNormalizer.panguSpace("僕はVOCAを使う"), "僕は VOCA を使う")
         XCTAssertEqual(TextNormalizer.panguSpace("이VOCA"), "이 VOCA")
     }
+
+    /// Regression: the editor must NOT translate English words embedded
+    /// in a Chinese utterance (or vice versa) — code-switching is
+    /// preserved verbatim.
+    func testRefinementPromptCoversCodeSwitching() {
+        let prompt = RefinementPrompts.system(
+            tone: "natural", glossary: [], memoryPhrases: [],
+            personalFacts: "", detectedLanguage: nil
+        )
+        XCTAssertTrue(prompt.contains("Code-switching") ||
+                      prompt.lowercased().contains("code-switching"),
+                      "Expected an explicit code-switching rule")
+        XCTAssertTrue(prompt.contains("deadline") || prompt.contains("sync"),
+                      "Expected a concrete CN+EN code-switch example")
+        XCTAssertTrue(prompt.contains("NEVER translate inline") ||
+                      prompt.lowercased().contains("never translate inline"),
+                      "Expected an explicit no-translate-inline directive")
+    }
+
+    /// Regression: the Chinese languageRule must clarify that the
+    /// character-set requirement is character-set only — NOT a licence
+    /// to translate English words into Chinese.
+    func testChineseLanguageRulePreservesEnglish() {
+        let traditional = RefinementPrompts.languageRule(for: "zh-Hant")
+        XCTAssertTrue(traditional.contains("English") &&
+                      (traditional.contains("stay in English") ||
+                       traditional.contains("not translate")),
+                      "zh-Hant rule must explicitly preserve English words")
+
+        let simplified = RefinementPrompts.languageRule(for: "zh-Hans")
+        XCTAssertTrue(simplified.contains("English") &&
+                      (simplified.contains("stay in English") ||
+                       simplified.contains("not translate")),
+                      "zh-Hans rule must explicitly preserve English words")
+    }
 }

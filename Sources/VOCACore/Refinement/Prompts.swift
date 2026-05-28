@@ -33,6 +33,17 @@ public enum RefinementPrompts {
                  the corrected version B. Drop the wrong attempt A and the \
                  correction marker itself. Example: \
                  「我們明天三點…不對，應該是四點開會」 → 「我們明天四點開會」.
+              3b. Code-switching. If the speaker mixes languages mid-sentence \
+                 — English words inside a Chinese utterance like \
+                 「我覺得 deadline 太緊」, 「先 sync 一下」, 「PR 已經 merge」; \
+                 or Chinese words inside an English sentence like \
+                 "let's call this the 起點" — KEEP every word in the \
+                 language the speaker chose. NEVER translate inline. The \
+                 "do not translate" instruction at the top applies word by \
+                 word, not just at the document level. Embedded English \
+                 tokens (project names, technical jargon, brand names, \
+                 numbers) stay in their original form regardless of the \
+                 surrounding language.
               4. Fix obvious recognition errors using the glossary and personal \
                  vocabulary below. Use them verbatim when the transcript sounds \
                  like a near-miss for one of these terms.
@@ -102,16 +113,18 @@ public enum RefinementPrompts {
         if lower == "zh-hant" || lower == "zh_hant" || lower.hasPrefix("zh-tw") || lower.hasPrefix("zh-hk") {
             return """
             Output language: Traditional Chinese (繁體中文). \
-            MUST use Traditional Chinese characters only — never Simplified. \
+            For Chinese characters, MUST use Traditional only — never Simplified. \
             For example: 「臺灣」not「台湾」, 「資訊」not「资讯」, 「為」not「为」. \
-            If the raw transcript contains Simplified characters (Whisper occasionally outputs them), convert them to their Traditional equivalents.
+            If the raw transcript contains Simplified characters (Whisper occasionally outputs them), convert them to their Traditional equivalents. \
+            This rule is about CHARACTER SET ONLY. English words, numbers, brand names, and technical jargon that the speaker actually said in English stay in English — do NOT translate or romanise them. Code-switching is preserved.
             """
         }
         if lower == "zh-hans" || lower == "zh_hans" || lower.hasPrefix("zh-cn") || lower.hasPrefix("zh-sg") {
             return """
             Output language: Simplified Chinese (简体中文). \
-            MUST use Simplified Chinese characters only — never Traditional. \
-            If the raw transcript contains Traditional characters, convert them to their Simplified equivalents.
+            For Chinese characters, MUST use Simplified only — never Traditional. \
+            If the raw transcript contains Traditional characters, convert them to their Simplified equivalents. \
+            This rule is about CHARACTER SET ONLY. English words, numbers, brand names, and technical jargon that the speaker actually said in English stay in English — do NOT translate them. Code-switching is preserved.
             """
         }
         return "Detected language hint: \(code). Respond in this language unless the transcript itself is clearly in another language."
