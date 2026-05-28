@@ -256,14 +256,13 @@ VOCA is built and maintained in spare time. If it saves you time or
 typing pain, consider chipping in — it pays for the occasional Apple
 Developer Program fee, coffee, and the API credits used while testing.
 
-| Network | Address |
-|---|---|
-| **Bitcoin** (`BTC`, native segwit / taproot) | `bc1pzrjrmhru0lm6g062d0nccmu0emhfmymqhacfqen3dya2985r8kvs09jxmy` |
-| **Ethereum + EVM** (`ERC-20` — also works on Polygon, BSC, Arbitrum, Base, etc.) | `0x081540Eb4c21B8Be8a652d408A4711bFaffeB5f4` |
-| **Solana** (`SOL`, `SPL`) | `GarVB5hdQ4bZ2JfJcNG8i363CL2jWBFDscwLWVNrzVxD` |
+**Ethereum / EVM** (works on Mainnet, Polygon, BSC, Arbitrum, Base, etc.):
 
-For non-crypto support or anything else, email
-**valley.mirror7602@eagereverest.com**.
+```
+0x081540Eb4c21B8Be8a652d408A4711bFaffeB5f4
+```
+
+For anything else, email **valley.mirror7602@eagereverest.com**.
 
 ## Acknowledgments
 
