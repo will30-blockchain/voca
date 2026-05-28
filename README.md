@@ -26,8 +26,8 @@ use; nothing is stored on someone else's server.
 - **Personal dictionary that learns.** Names, acronyms, and jargon you say
   often get added automatically when you fix a typo right after dictation,
   Typeless-style. You always see what was learned, with one-tap Undo.
-- **Translate mode.** Hold Right Shift while tapping Right Option to dictate
-  in one language and paste the translation in another.
+- **Translate mode.** Tap Right Option, then add Right Shift before
+  releasing, to dictate in one language and paste the translation in another.
 - **Flat, paper-like UI.** No glass effects, no glow, no AI sheen. Just
   warm-white surfaces and SF Pro.
 
@@ -36,7 +36,7 @@ use; nothing is stored on someone else's server.
 | | |
 |---|---|
 | 🎙 Hotkey | Tap **Right Option** to start/stop dictation |
-| 🌐 Translate | Tap **Right Option + Right Shift** for translation |
+| 🌐 Translate | Tap **Right Option**, add **Right Shift** before releasing |
 | 🔊 Live meter | RMS-driven waveform tells you the mic is actually capturing |
 | ⌥ Refine | LLM cleans punctuation, fixes Whisper hallucinations, applies tone |
 | 📖 Dictionary | Glossary of proper nouns biases STT *and* LLM editor |

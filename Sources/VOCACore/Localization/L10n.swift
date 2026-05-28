@@ -286,7 +286,7 @@ public enum L10n: String, CaseIterable, Sendable {
         .hotkeyDictateTitle: "Dictate",
         .hotkeyDictateDescription: "Tap once to start, tap again to stop and paste.",
         .hotkeyTranslateTitle: "Translate",
-        .hotkeyTranslateDescription: "Hold Right Shift while tapping Right Option. Tap Right Option again to stop.",
+        .hotkeyTranslateDescription: "Tap Right Option and add Right Shift before releasing. Tap Right Option again to stop.",
         .hotkeysAccentNote: "Right Option held continuously (longer than 0.5 s) still works for accent input — Option+E for é, etc.",
 
         .recentTitle: "Recent dictations",
@@ -382,7 +382,7 @@ public enum L10n: String, CaseIterable, Sendable {
         .languagesTranslateSection: "Translate mode",
         .languagesSourceLabel: "Source",
         .languagesTargetLabel: "Target",
-        .languagesTranslateHint: "Hold Right Option + Right Shift to dictate in the source language and paste the translated result in the target language.",
+        .languagesTranslateHint: "Tap Right Option, then add Right Shift (before releasing) to dictate in the source language and paste the translated result in the target language.",
 
         .dictionarySubtitle: "Names, acronyms, and jargon you say often. VOCA passes these to both the transcription model and the LLM editor so spelling stays consistent.",
         .dictionaryAddSection: "Add a term",
@@ -475,7 +475,7 @@ public enum L10n: String, CaseIterable, Sendable {
         .hotkeyDictateTitle: "錄音",
         .hotkeyDictateDescription: "點一下開始，再點一下停止並貼上。",
         .hotkeyTranslateTitle: "翻譯",
-        .hotkeyTranslateDescription: "按住 Right Shift 的同時點 Right Option。再點 Right Option 停止。",
+        .hotkeyTranslateDescription: "點 Right Option，放掉前再加按 Right Shift。再點 Right Option 停止。",
         .hotkeysAccentNote: "按住 Right Option 超過 0.5 秒不會觸發 — 輸入重音字元(Option+E → é)等照常運作。",
 
         .recentTitle: "最近的轉錄",
@@ -571,7 +571,7 @@ public enum L10n: String, CaseIterable, Sendable {
         .languagesTranslateSection: "翻譯模式",
         .languagesSourceLabel: "來源",
         .languagesTargetLabel: "目標",
-        .languagesTranslateHint: "按住 Right Option + Right Shift 用來源語言錄音，結果會以目標語言貼出。",
+        .languagesTranslateHint: "點 Right Option，放掉前加按 Right Shift，就用來源語言錄音、以目標語言貼出。",
 
         .dictionarySubtitle: "你常講的人名、縮寫、專有名詞。VOCA 會把這些一併送給 STT 模型與 LLM 編輯器，維持拼字一致。",
         .dictionaryAddSection: "加入新詞",

@@ -5,8 +5,10 @@ import Carbon.HIToolbox
 
 /// Tap-toggle global hotkey:
 ///   - Tap **Right Option** → toggle transcribe mode (start; tap again to stop).
-///   - Tap **Right Option + Right Shift** (both pressed together) → toggle
-///     translate mode.
+///   - Tap **Right Option + Right Shift** → toggle translate mode. Either
+///     order works: press Option first then add Shift before releasing, or
+///     hold Shift first and tap Option. As long as both were down at any
+///     point during the Option tap window, the tap fires as translate.
 ///
 /// A "tap" is a key-down followed by a key-up within `tapWindow` (default
 /// 0.5 s). Anything longer is treated as a hold (for accent input like
@@ -133,9 +135,16 @@ public final class HotkeyManager {
 
         // Right Option transition is the only thing that decides a tap.
         if rightOption && !lastRightOption {
-            // Key down.
+            // Key down. Latch translate if Shift was already held when
+            // Option went down.
             rightOptionDownAt = Date().timeIntervalSince1970
             translateLatched = rightShift
+        } else if rightOption && rightShift && !translateLatched {
+            // Right Option is still held and Right Shift just came on
+            // (the "Option first, then Shift" gesture). Latch translate
+            // so the upcoming Option key-up fires as translate even if
+            // Shift gets released before Option does.
+            translateLatched = true
         } else if !rightOption && lastRightOption {
             // Key up.
             defer { rightOptionDownAt = nil; translateLatched = false }
@@ -149,9 +158,9 @@ public final class HotkeyManager {
             onToggle?(mode)
         }
 
-        // If Right Shift is released while Right Option is still down, we keep
-        // the original `translateLatched` value — once you decided "this is a
-        // translate tap" by holding shift at key-down, you don't want to lose
-        // it because shift happened to flick up early.
+        // Once `translateLatched` is true for a given Option hold, it
+        // stays true until the next Option key-up — we never down-grade
+        // a translate intent back to transcribe just because Shift went
+        // up early.
     }
 }
