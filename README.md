@@ -21,11 +21,20 @@ use; nothing is stored on someone else's server.
 - **Bring your own keys.** Groq, OpenAI, Anthropic, Deepgram, or fully offline
   via Apple Speech. The cheapest pairing (Groq Whisper + Llama 3.3) costs a
   fraction of a cent per dictation.
-- **LLM polish.** Drops filler words, adds punctuation, honours voice commands
-  ("new line", "period"), respects your glossary — without inventing content.
+- **LLM polish.** Drops filler words (English + Chinese disfluencies like
+  「嗯」「那個」「就是」), handles self-corrections ("I meant X" / 「不對是 X」
+  → keeps only X), auto-formats emails when it sees a greeting + sign-off,
+  and turns enumerated speech (「第一點…第二點…」 / "first…second…") into
+  proper numbered lists. Without inventing content.
 - **Personal dictionary that learns.** Names, acronyms, and jargon you say
   often get added automatically when you fix a typo right after dictation,
-  Typeless-style. You always see what was learned, with one-tap Undo.
+  Typeless-style. The bottom-of-screen toast confirms each catch ~3 s
+  after you stop editing, and Dashboard shows a running list with
+  per-row remove. Settings → Dictionary filters by *Auto / Manual* so you
+  can tell what VOCA learned itself from what you typed in.
+- **Pangu spacing.** Inserts a half-width space between CJK and Latin or
+  digits so mixed output reads naturally («用VOCA» → «用 VOCA»). Default
+  on, toggle in Settings → Languages → Typography.
 - **Translate mode.** Tap Right Option, then add Right Shift before
   releasing, to dictate in one language and paste the translation in another.
 - **Flat, paper-like UI.** No glass effects, no glow, no AI sheen. Just
@@ -38,9 +47,12 @@ use; nothing is stored on someone else's server.
 | 🎙 Hotkey | Tap **Right Option** to start/stop dictation |
 | 🌐 Translate | Tap **Right Option**, add **Right Shift** before releasing |
 | 🔊 Live meter | RMS-driven waveform tells you the mic is actually capturing |
-| ⌥ Refine | LLM cleans punctuation, fixes Whisper hallucinations, applies tone |
-| 📖 Dictionary | Glossary of proper nouns biases STT *and* LLM editor |
-| 🧠 Memory | Phrases you use often, plus free-form personal facts |
+| ⌥ Refine | LLM cleans punctuation, drops fillers, handles self-corrections |
+| ✉️ Email shape | Auto-formats when it sees a greeting + sign-off |
+| 1️⃣ Lists | 「第一點 / 第二點 / …」 → real numbered list |
+| 📖 Dictionary | Glossary biases STT and LLM editor. Auto-adds proper nouns when you correct a typo after pasting |
+| 🧠 Memory | Frequency-tracked phrases (≥ 2 uses), plus free-form personal facts |
+| ✦ Pangu spacing | Half-width space between CJK and Latin / digits (default on) |
 | ↻ Retry | Network blip mid-pipeline → audio stays buffered, retry on tap |
 | ⎋ ESC | Press anywhere to cancel an in-progress recording |
 | 📋 Logs | Settings → Logs shows every pipeline step + per-stage latency |

@@ -24,3 +24,12 @@ Package.resolved
 settings.json
 log.jsonl
 secrets/
+
+# Personal-data store files. They live in ~/Library/Application Support/
+# VOCA/ but these patterns block accidental copies in the repo too.
+dictionary.json
+memory.json
+history.json
+
+# Local design / icon experiments — kept out of the repo to avoid bloat.
+Resources/logo-variants/
