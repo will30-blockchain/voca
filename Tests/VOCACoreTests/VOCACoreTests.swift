@@ -171,20 +171,35 @@ final class VOCACoreTests: XCTestCase {
 
     /// Regression: the editor must NOT translate English words embedded
     /// in a Chinese utterance (or vice versa) — code-switching is
-    /// preserved verbatim.
+    /// preserved verbatim. Tests both the rule's presence AND the
+    /// concrete forbidden-translation examples.
     func testRefinementPromptCoversCodeSwitching() {
         let prompt = RefinementPrompts.system(
             tone: "natural", glossary: [], memoryPhrases: [],
             personalFacts: "", detectedLanguage: nil
         )
-        XCTAssertTrue(prompt.contains("Code-switching") ||
-                      prompt.lowercased().contains("code-switching"),
+        XCTAssertTrue(prompt.lowercased().contains("code-switching"),
                       "Expected an explicit code-switching rule")
-        XCTAssertTrue(prompt.contains("deadline") || prompt.contains("sync"),
-                      "Expected a concrete CN+EN code-switch example")
-        XCTAssertTrue(prompt.contains("NEVER translate inline") ||
-                      prompt.lowercased().contains("never translate inline"),
-                      "Expected an explicit no-translate-inline directive")
+        XCTAssertTrue(prompt.contains("deadline") && prompt.contains("sync"),
+                      "Expected concrete CN+EN code-switch examples")
+        // The explicit "update → update (NOT 更新)" example is the
+        // strongest guard against the most-reported failure mode.
+        XCTAssertTrue(prompt.contains("update") && prompt.contains("更新"),
+                      "Expected the update→更新 forbidden-translation example")
+        XCTAssertTrue(prompt.contains("forbidden") ||
+                      prompt.contains("non-negotiable") ||
+                      prompt.contains("MUST stay"),
+                      "Expected emphatic no-translate phrasing")
+    }
+
+    /// The reinforcement message in the user prompt should also call out
+    /// the no-translate rule so the model sees it twice (system + user).
+    func testRefinementUserPromptReinforcesNoTranslate() {
+        let userPrompt = RefinementPrompts.user(transcript: "我要 update 一下")
+        XCTAssertTrue(userPrompt.contains("update") && userPrompt.contains("更新"),
+                      "User-prompt reminder should show the update→更新 forbidden pair")
+        XCTAssertTrue(userPrompt.contains("我要 update 一下"),
+                      "User prompt must still embed the transcript verbatim")
     }
 
     /// Regression: the Chinese languageRule must clarify that the
