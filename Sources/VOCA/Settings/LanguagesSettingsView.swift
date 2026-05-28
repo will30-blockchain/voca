@@ -11,6 +11,20 @@ struct LanguagesSettingsView: View {
         ) {
             primaryCard
             translateCard
+            typographyCard
+        }
+    }
+
+    private var typographyCard: some View {
+        Card {
+            VStack(alignment: .leading, spacing: DesignTokens.Space.md) {
+                SectionTitle(store.t(.languagesTypographySection))
+                ToggleRow(
+                    title: store.t(.languagesAutoSpaceTitle),
+                    hint: store.t(.languagesAutoSpaceHint),
+                    isOn: bind(\.autoSpaceCJK)
+                )
+            }
         }
     }
 

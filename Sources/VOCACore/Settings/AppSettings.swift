@@ -165,6 +165,9 @@ public struct AppSettings: Codable, Sendable, Equatable {
     public var playSounds: Bool
     /// UI display language. Defaults to .system (follow macOS locale).
     public var uiLanguage: AppLanguage
+    /// Insert a half-width space between CJK characters and Latin letters
+    /// or digits in the final pasted output ("Pangu spacing"). Default on.
+    public var autoSpaceCJK: Bool
 
     public enum InjectionMethod: String, Codable, CaseIterable, Sendable {
         case paste = "paste"
@@ -193,7 +196,8 @@ public struct AppSettings: Codable, Sendable, Equatable {
         showHUD: Bool = true,
         injectionMethod: InjectionMethod = .paste,
         playSounds: Bool = true,
-        uiLanguage: AppLanguage = .systemDefault
+        uiLanguage: AppLanguage = .systemDefault,
+        autoSpaceCJK: Bool = true
     ) {
         self.sttProvider = sttProvider
         self.sttModel = sttModel
@@ -210,6 +214,32 @@ public struct AppSettings: Codable, Sendable, Equatable {
         self.injectionMethod = injectionMethod
         self.playSounds = playSounds
         self.uiLanguage = uiLanguage
+        self.autoSpaceCJK = autoSpaceCJK
+    }
+
+    /// Custom decoder so adding a new field to `AppSettings` doesn't wipe
+    /// existing users' `settings.json`. Every field uses `decodeIfPresent`
+    /// with a fallback to the canonical default; missing keys silently
+    /// keep that default instead of throwing.
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let d = AppSettings()
+        self.sttProvider = try c.decodeIfPresent(STTProviderID.self, forKey: .sttProvider) ?? d.sttProvider
+        self.sttModel = try c.decodeIfPresent(String.self, forKey: .sttModel) ?? d.sttModel
+        self.llmProvider = try c.decodeIfPresent(LLMProviderID.self, forKey: .llmProvider) ?? d.llmProvider
+        self.llmModel = try c.decodeIfPresent(String.self, forKey: .llmModel) ?? d.llmModel
+        self.credentials = try c.decodeIfPresent(ProviderCredentials.self, forKey: .credentials) ?? d.credentials
+        self.primaryLanguage = try c.decodeIfPresent(String.self, forKey: .primaryLanguage) ?? d.primaryLanguage
+        self.translateTargetLanguage = try c.decodeIfPresent(String.self, forKey: .translateTargetLanguage) ?? d.translateTargetLanguage
+        self.translateSourceLanguage = try c.decodeIfPresent(String.self, forKey: .translateSourceLanguage) ?? d.translateSourceLanguage
+        self.tone = try c.decodeIfPresent(String.self, forKey: .tone) ?? d.tone
+        self.learningEnabled = try c.decodeIfPresent(Bool.self, forKey: .learningEnabled) ?? d.learningEnabled
+        self.learnFromCorrections = try c.decodeIfPresent(Bool.self, forKey: .learnFromCorrections) ?? d.learnFromCorrections
+        self.showHUD = try c.decodeIfPresent(Bool.self, forKey: .showHUD) ?? d.showHUD
+        self.injectionMethod = try c.decodeIfPresent(InjectionMethod.self, forKey: .injectionMethod) ?? d.injectionMethod
+        self.playSounds = try c.decodeIfPresent(Bool.self, forKey: .playSounds) ?? d.playSounds
+        self.uiLanguage = try c.decodeIfPresent(AppLanguage.self, forKey: .uiLanguage) ?? d.uiLanguage
+        self.autoSpaceCJK = try c.decodeIfPresent(Bool.self, forKey: .autoSpaceCJK) ?? d.autoSpaceCJK
     }
 
     public static let `default` = AppSettings()

@@ -6,6 +6,25 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Typography & About
+
+- **Pangu spacing (default on)** — VOCA now inserts a half-width space
+  between CJK characters and Latin letters or digits in the pasted
+  output (e.g. "用VOCA" → "用 VOCA", "2026年5月" → "2026 年 5 月").
+  Applied after LLM refinement, before injection. Toggle in
+  Settings → Languages → Typography. Handles Han, Hiragana,
+  Katakana, and Hangul; preserves CJK punctuation; never double-spaces.
+- **About pane: publisher footer** — small centered line at the bottom
+  reading *Published by SuperDigital and Wilson Chen · 2026*.
+
+### Settings durability
+
+- `AppSettings.init(from:)` is now a custom decoder that uses
+  `decodeIfPresent ?? default` for every field. Previously adding any
+  new field would fail decoding of existing users' `settings.json` and
+  silently reset all of their preferences. Going forward, missing keys
+  fall back to defaults instead of throwing.
+
 ### Auto-learn visibility (was practically invisible before)
 
 - **Edit-time trigger (new)** — `CorrectionLearner` now starts a polling

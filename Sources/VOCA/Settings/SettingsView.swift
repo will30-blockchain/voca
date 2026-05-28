@@ -243,6 +243,15 @@ struct AboutSettingsView: View {
                         .vtTertiaryText()
                 }
             }
+
+            HStack {
+                Spacer()
+                Text(store.t(.aboutPublisher))
+                    .font(DesignTokens.Typography.caption)
+                    .vtTertiaryText()
+                Spacer()
+            }
+            .padding(.top, DesignTokens.Space.sm)
         }
     }
 }

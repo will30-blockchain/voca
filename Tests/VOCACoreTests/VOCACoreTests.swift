@@ -76,4 +76,42 @@ final class VOCACoreTests: XCTestCase {
         let entry = try JSONDecoder().decode(UserDictionary.Entry.self, from: json)
         XCTAssertEqual(entry.source, .autoLearned)
     }
+
+    // MARK: - TextNormalizer (Pangu CJK ⇄ Latin/digit spacing)
+
+    func testPanguSpacesCJKAndLatinBothDirections() {
+        XCTAssertEqual(TextNormalizer.panguSpace("我用VOCA"), "我用 VOCA")
+        XCTAssertEqual(TextNormalizer.panguSpace("VOCA好用"), "VOCA 好用")
+        XCTAssertEqual(TextNormalizer.panguSpace("VOCA好用很perfect"), "VOCA 好用很 perfect")
+    }
+
+    func testPanguSpacesCJKAndDigit() {
+        XCTAssertEqual(TextNormalizer.panguSpace("2026年5月"), "2026 年 5 月")
+        XCTAssertEqual(TextNormalizer.panguSpace("第3次"), "第 3 次")
+    }
+
+    func testPanguNoDoubleSpaceWhenAlreadySpaced() {
+        XCTAssertEqual(TextNormalizer.panguSpace("我用 VOCA"), "我用 VOCA")
+        XCTAssertEqual(TextNormalizer.panguSpace("VOCA 好用"), "VOCA 好用")
+    }
+
+    func testPanguPreservesCJKPunctuation() {
+        // No space between Latin and CJK punctuation, no space between CJK
+        // chars and CJK punctuation.
+        XCTAssertEqual(TextNormalizer.panguSpace("我用VOCA。"), "我用 VOCA。")
+        XCTAssertEqual(TextNormalizer.panguSpace("「VOCA」很好"), "「VOCA」很好")
+    }
+
+    func testPanguHandlesPureLatinAndPureCJKUnchanged() {
+        XCTAssertEqual(TextNormalizer.panguSpace("Hello world"), "Hello world")
+        XCTAssertEqual(TextNormalizer.panguSpace("中文句子"), "中文句子")
+        XCTAssertEqual(TextNormalizer.panguSpace(""), "")
+        XCTAssertEqual(TextNormalizer.panguSpace("A"), "A")
+    }
+
+    func testPanguHandlesKanaAndHangul() {
+        // Hiragana / Katakana / Hangul all count as CJK for the spacer.
+        XCTAssertEqual(TextNormalizer.panguSpace("僕はVOCAを使う"), "僕は VOCA を使う")
+        XCTAssertEqual(TextNormalizer.panguSpace("이VOCA"), "이 VOCA")
+    }
 }

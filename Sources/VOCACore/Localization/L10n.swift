@@ -180,6 +180,9 @@ public enum L10n: String, CaseIterable, Sendable {
     case languagesSourceLabel
     case languagesTargetLabel
     case languagesTranslateHint
+    case languagesTypographySection
+    case languagesAutoSpaceTitle
+    case languagesAutoSpaceHint
 
     // MARK: - Dictionary settings
     case dictionarySubtitle
@@ -234,6 +237,7 @@ public enum L10n: String, CaseIterable, Sendable {
     case aboutSupportSection
     case aboutSupportFooter
     case aboutSupportEmailLabel
+    case aboutPublisher
 
     // MARK: - Recently learned (Dashboard)
     case learnedTitle
@@ -372,6 +376,9 @@ public enum L10n: String, CaseIterable, Sendable {
         .languagesPrimarySection: "Primary dictation",
         .languagesPrimaryLabel: "Language",
         .languagesPrimaryHint: "Auto-detect mixes Chinese and English smoothly. Pin a language if your accent confuses Whisper.",
+        .languagesTypographySection: "Typography",
+        .languagesAutoSpaceTitle: "Auto-space mixed Chinese/English",
+        .languagesAutoSpaceHint: "Inserts a half-width space between CJK characters and Latin letters or digits (e.g. \"用VOCA\" → \"用 VOCA\"). Applied to the pasted output.",
         .languagesTranslateSection: "Translate mode",
         .languagesSourceLabel: "Source",
         .languagesTargetLabel: "Target",
@@ -426,6 +433,7 @@ public enum L10n: String, CaseIterable, Sendable {
         .aboutSupportSection: "Support development",
         .aboutSupportFooter: "VOCA is maintained in spare time. Tips go toward Apple Developer fees and API credits used during testing. Select any address to copy.",
         .aboutSupportEmailLabel: "Email",
+        .aboutPublisher: "Published by SuperDigital and Wilson Chen · 2026",
 
         .learnedTitle: "Recently learned",
         .learnedEmptyTitle: "Nothing learned yet",
@@ -557,6 +565,9 @@ public enum L10n: String, CaseIterable, Sendable {
         .languagesPrimarySection: "主要錄音語言",
         .languagesPrimaryLabel: "語言",
         .languagesPrimaryHint: "「自動偵測」對中英混講最順。如果你的口音常讓 Whisper 誤判，就指定一個固定語言。",
+        .languagesTypographySection: "排版",
+        .languagesAutoSpaceTitle: "中英文之間自動加空格",
+        .languagesAutoSpaceHint: "在中文字與英文字母／數字之間自動插入一個半形空格（例如「用VOCA」→「用 VOCA」），會套用到貼上的結果。",
         .languagesTranslateSection: "翻譯模式",
         .languagesSourceLabel: "來源",
         .languagesTargetLabel: "目標",
@@ -611,6 +622,7 @@ public enum L10n: String, CaseIterable, Sendable {
         .aboutSupportSection: "贊助開發",
         .aboutSupportFooter: "VOCA 在業餘時間維護，贊助會用在 Apple 開發者年費與測試時的 API 額度。點選地址即可複製。",
         .aboutSupportEmailLabel: "聯絡信箱",
+        .aboutPublisher: "發佈者：SuperDigital 與 Wilson Chen · 2026",
 
         .learnedTitle: "最近學到的詞",
         .learnedEmptyTitle: "還沒學到新詞",

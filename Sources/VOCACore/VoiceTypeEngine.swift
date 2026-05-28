@@ -258,16 +258,25 @@ public final class VOCAEngine: ObservableObject {
             let llmProvider = settingsStore.settings.llmProvider.rawValue
             let llmModel = settingsStore.settings.llmModel
             let llmStart = Date()
-            let finalText = try await refine(raw: raw, mode: mode)
+            let refined = try await refine(raw: raw, mode: mode)
             let llmLatency = String(format: "%.2f", Date().timeIntervalSince(llmStart))
             if settingsStore.settings.llmProvider != .disabled {
                 log.info(.llm, mode == .translate ? "Translated" : "Refined",
                          detail: [
                             "provider": llmProvider, "model": llmModel,
-                            "in_chars": "\(raw.text.count)", "out_chars": "\(finalText.count)",
+                            "in_chars": "\(raw.text.count)", "out_chars": "\(refined.count)",
                             "latency_s": llmLatency
                          ])
             }
+
+            // Post-LLM text cleanups. Pangu spacing inserts a half-width
+            // space between CJK characters and Latin letters/digits so
+            // mixed-script output reads naturally. The LLM's raw output
+            // is preserved in the log above; the normalised version is
+            // what gets pasted and learned from.
+            let finalText = settingsStore.settings.autoSpaceCJK
+                ? TextNormalizer.panguSpace(refined)
+                : refined
 
             state = .processing(mode: mode, stage: .injecting)
             try await injector.inject(finalText, method: settingsStore.settings.injectionMethod)
