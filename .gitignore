@@ -33,3 +33,6 @@ history.json
 
 # Local design / icon experiments — kept out of the repo to avoid bloat.
 Resources/logo-variants/
+
+# Editor / tool backup files.
+*.bak

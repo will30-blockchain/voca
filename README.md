@@ -66,7 +66,7 @@ Prerequisites:
 
 ```bash
 git clone https://github.com/will30-blockchain/voca.git
-cd voca-ai-typer
+cd voca
 ./scripts/setup-signing.sh   # one-time: create a stable local signing cert
 ./scripts/build-app.sh       # build + sign VOCA.app
 open dist/VOCA.app
@@ -180,7 +180,7 @@ Sources/
     History/ Logging/       — Transcript log + event log
     Settings/ Util/         — Persistence helpers, SupportDirectory
     Permissions/            — Mic + AX permission helpers
-    VOCAEngine.swift        — Top-level pipeline orchestrator
+    VoiceTypeEngine.swift   — Top-level pipeline orchestrator
 
   VOCA/                     — macOS app (menu-bar, windows, HUD, toast)
     AppDelegate · main · MenuBarController

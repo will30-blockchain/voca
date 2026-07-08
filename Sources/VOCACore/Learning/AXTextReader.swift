@@ -74,6 +74,8 @@ public enum AXTextReader {
         ) == .success, let appRef = focusedApp else {
             return nil
         }
+        // Force-cast is safe: CFTypeRef → AXUIElement always succeeds here
+        // (`as?` is a compile error for CoreFoundation downcasts).
         let appElement = appRef as! AXUIElement
 
         // Reject blocked apps before reading anything.

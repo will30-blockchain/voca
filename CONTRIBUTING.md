@@ -6,7 +6,7 @@ Thanks for being here. A few quick notes so your first PR lands smoothly.
 
 ```bash
 git clone https://github.com/will30-blockchain/voca.git
-cd voca-ai-typer
+cd voca
 ./scripts/setup-signing.sh   # one-time, creates a local code-signing cert
 swift build
 swift test
