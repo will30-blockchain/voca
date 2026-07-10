@@ -42,6 +42,15 @@ public enum CorrectionDiff {
         guard !original.isEmpty else { return Report(candidates: [], overlap: 0) }
         guard !current.isEmpty else { return Report(candidates: [], overlap: 0) }
 
+        // Size guard for the word-level LCS below (the CJK char pass has its
+        // own 2 000-char bail). The DP allocates an (m+1)×(n+1) matrix on the
+        // main actor; a doc-dump paste must not turn a correction diff into a
+        // multi-megabyte allocation. A real dictation correction is never
+        // this long.
+        guard originalPaste.count <= 4_000, currentText.count <= 4_000 else {
+            return Report(candidates: [], overlap: 0)
+        }
+
         // Expansion guard: if the edited text is a large expansion of what we
         // pasted (roughly doubled in length), the user is writing NEW content
         // into the same field — not correcting our output. A high LCS overlap

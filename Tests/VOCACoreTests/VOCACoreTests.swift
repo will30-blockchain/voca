@@ -344,6 +344,18 @@ final class VOCACoreTests: XCTestCase {
         XCTAssertTrue(report.candidates.contains("陳依文"))
     }
 
+    /// A doc-dump-sized field must not trigger the O(n·m) word-level DP.
+    func testCorrectionDiffBailsOnHugeInput() {
+        let huge = String(repeating: "word ", count: 1200) // ~6000 chars
+        let report = CorrectionDiff.newCandidates(
+            originalPaste: huge,
+            currentText: huge + "Anthropic",
+            existingDictionary: [],
+            existingMemory: []
+        )
+        XCTAssertEqual(report.candidates, [])
+    }
+
     // MARK: - CorrectionLearner.safeHint (privacy)
 
     /// Secret-shaped tokens in the context hint are redacted.
