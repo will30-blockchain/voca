@@ -359,6 +359,28 @@ final class VOCACoreTests: XCTestCase {
         XCTAssertTrue(hint.hasPrefix("meeting notes"))
     }
 
+    // MARK: - LearningMetrics (observability)
+
+    func testLearningMetricsCaptureRate() {
+        var m = LearningMetrics()
+        XCTAssertEqual(m.captureRate, 0, "no attempts → 0, not NaN")
+        m.captureAttempts = 4
+        m.captureSuccesses = 1
+        XCTAssertEqual(m.captureRate, 0.25, accuracy: 0.001)
+    }
+
+    func testLearningMetricsSummaryAndCodable() throws {
+        var m = LearningMetrics()
+        m.captureAttempts = 2
+        m.captureSuccesses = 1
+        m.termsPromoted = 3
+        XCTAssertTrue(m.summary.contains("50%"))
+        let restored = try JSONDecoder().decode(
+            LearningMetrics.self, from: JSONEncoder().encode(m)
+        )
+        XCTAssertEqual(restored, m)
+    }
+
     // MARK: - STTBias (glossary → provider bias)
 
     /// Priority order is manual → memory → auto-learned, and duplicates are

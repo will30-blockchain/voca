@@ -30,6 +30,7 @@ public final class CorrectionLearner: ObservableObject {
     private let log: LogStore
     private let fieldReader: FieldReader
     private let gate: CorrectionGate
+    private let metrics: LearningMetricsStore
 
     private var pendingSnapshot: FieldSnapshot?
     private var pendingPasteText: String = ""
@@ -44,13 +45,15 @@ public final class CorrectionLearner: ObservableObject {
         memory: PersonalMemory,
         log: LogStore,
         fieldReader: FieldReader = AXFieldReader(),
-        gate: CorrectionGate = CorrectionGate()
+        gate: CorrectionGate = CorrectionGate(),
+        metrics: LearningMetricsStore = LearningMetricsStore()
     ) {
         self.dictionary = dictionary
         self.memory = memory
         self.log = log
         self.fieldReader = fieldReader
         self.gate = gate
+        self.metrics = metrics
     }
 
     /// Called from the engine right after a successful paste. Captures the
@@ -64,11 +67,15 @@ public final class CorrectionLearner: ObservableObject {
         if let snap = fieldReader.snapshotFocused() {
             pendingSnapshot = snap
             pendingPasteText = text
+            metrics.recordCaptureAttempt(succeeded: true)
             log.info(.memory, "Captured paste for learning", detail: ["chars": "\(text.count)"])
             startEditWatch(snapshot: snap)
         } else {
             pendingSnapshot = nil
-            log.info(.memory, "Could not snapshot focused field — skipping correction learning")
+            metrics.recordCaptureAttempt(succeeded: false)
+            log.info(.memory, "Could not snapshot focused field — skipping correction learning", detail: [
+                "capture_rate": metrics.metrics.summary
+            ])
         }
     }
 
@@ -153,6 +160,7 @@ public final class CorrectionLearner: ObservableObject {
             return
         }
 
+        metrics.recordReviewFired()
         let report = CorrectionDiff.newCandidates(
             originalPaste: pasted,
             currentText: current,
@@ -175,12 +183,14 @@ public final class CorrectionLearner: ObservableObject {
             // unrelated edit, app reflow — and for CJK it would learn common
             // words on any correction).
             guard gate.observe(term) else {
+                metrics.recordHeld()
                 log.info(.memory, "Correction candidate held (needs another sighting)", detail: [
                     "term": term,
                     "seen": "\(gate.pendingCount(term))/\(LearningGate.defaultThreshold)"
                 ])
                 continue
             }
+            metrics.recordPromoted()
             dictionary.add(term, note: "auto-learned from edit", source: .autoLearned)
             let entry = LearnedTerm(term: term, contextHint: contextHint)
             recent.insert(entry, at: 0)
