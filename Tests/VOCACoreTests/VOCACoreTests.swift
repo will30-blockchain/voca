@@ -487,6 +487,15 @@ final class VOCACoreTests: XCTestCase {
         XCTAssertFalse(gate.observe("Tokyo"), "after forget, needs threshold again")
     }
 
+    /// The pending map stays bounded — one-off sightings can't grow forever.
+    func testLearningGateBoundsPendingMap() {
+        var gate = LearningGate(threshold: 5) // high, so nothing promotes/clears
+        for i in 0..<(LearningGate.maxEntries + 500) {
+            _ = gate.observe("term\(i)")
+        }
+        XCTAssertLessThanOrEqual(gate.counts.count, LearningGate.maxEntries)
+    }
+
     /// A threshold of 1 promotes immediately (opt-out of gating).
     func testLearningGateThresholdOnePromotesImmediately() {
         var gate = LearningGate(threshold: 1)

@@ -20,7 +20,7 @@ public protocol FieldReader: AnyObject {
 /// Opaque capture token. Carries the value at capture time; the concrete
 /// reader keeps whatever backing it needs (an `AXUIElement`, or scripted
 /// test data) keyed by `id`.
-public final class FieldSnapshot: @unchecked Sendable {
+public final class FieldSnapshot: Sendable {
     public let id: UUID
     public let valueAtCapture: String
     public let capturedAt: Date

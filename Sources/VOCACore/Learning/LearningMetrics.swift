@@ -51,9 +51,13 @@ public final class LearningMetricsStore {
 
     public nonisolated init() {
         self.url = SupportDirectory.file("learn_metrics.json")
-        if let data = try? Data(contentsOf: url),
-           let decoded = try? JSONDecoder().decode(LearningMetrics.self, from: data) {
-            self.metrics = decoded
+        if let data = try? Data(contentsOf: url) {
+            if let decoded = try? JSONDecoder().decode(LearningMetrics.self, from: data) {
+                self.metrics = decoded
+            } else {
+                CorruptFile.quarantine(url)
+                self.metrics = LearningMetrics()
+            }
         } else {
             self.metrics = LearningMetrics()
         }

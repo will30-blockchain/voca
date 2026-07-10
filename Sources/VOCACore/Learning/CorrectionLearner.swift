@@ -192,7 +192,7 @@ public final class CorrectionLearner: ObservableObject {
                 metrics.recordHeld()
                 log.info(.memory, "Correction candidate held (needs another sighting)", detail: [
                     "term": term,
-                    "seen": "\(gate.pendingCount(term))/\(LearningGate.defaultThreshold)"
+                    "seen": "\(gate.pendingCount(term))/\(gate.threshold)"
                 ])
                 continue
             }

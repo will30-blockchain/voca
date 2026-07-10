@@ -13,6 +13,11 @@ import Foundation
 public struct LearningGate: Codable, Sendable, Equatable {
     public static let defaultThreshold = 2
 
+    /// Upper bound on the pending-counts map. One-off edits that never recur
+    /// would otherwise accumulate forever. When exceeded we drop the
+    /// least-committed (count == 1) entries, which dominate the map.
+    static let maxEntries = 2_000
+
     /// Pending observation counts, keyed by lowercased term.
     public private(set) var counts: [String: Int]
     public let threshold: Int
@@ -34,7 +39,19 @@ public struct LearningGate: Codable, Sendable, Equatable {
             return true
         }
         counts[key] = next
+        pruneIfNeeded(keeping: key)
         return false
+    }
+
+    /// Keep the map bounded: once over `maxEntries`, evict single-sighting
+    /// entries (never the one we just touched). They are the least valuable
+    /// and by far the most numerous.
+    private mutating func pruneIfNeeded(keeping key: String) {
+        guard counts.count > Self.maxEntries else { return }
+        for (k, v) in counts where v <= 1 && k != key {
+            counts[k] = nil
+            if counts.count <= Self.maxEntries { break }
+        }
     }
 
     /// Current pending count for a term (0 if none). For diagnostics/UI.
@@ -61,14 +78,21 @@ public final class CorrectionGate {
     // CorrectionLearner.init (only initializes stored properties).
     public nonisolated init(threshold: Int = LearningGate.defaultThreshold) {
         self.url = SupportDirectory.file("learn_gate.json")
-        if let data = try? Data(contentsOf: url),
-           let decoded = try? JSONDecoder().decode(LearningGate.self, from: data) {
-            // Preserve persisted counts but honour the current threshold.
-            self.gate = LearningGate(threshold: threshold, counts: decoded.counts)
+        if let data = try? Data(contentsOf: url) {
+            if let decoded = try? JSONDecoder().decode(LearningGate.self, from: data) {
+                // Preserve persisted counts but honour the current threshold.
+                self.gate = LearningGate(threshold: threshold, counts: decoded.counts)
+            } else {
+                CorruptFile.quarantine(url)
+                self.gate = LearningGate(threshold: threshold)
+            }
         } else {
             self.gate = LearningGate(threshold: threshold)
         }
     }
+
+    /// The number of sightings a term needs before it promotes.
+    public var threshold: Int { gate.threshold }
 
     /// See `LearningGate.observe`. Persists the updated counts.
     public func observe(_ term: String) -> Bool {
