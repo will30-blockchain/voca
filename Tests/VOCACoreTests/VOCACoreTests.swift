@@ -319,6 +319,46 @@ final class VOCACoreTests: XCTestCase {
                        "Wholesale rewrite should NOT produce candidates")
     }
 
+    /// Typing a whole new sentence into the same field is NEW content, not a
+    /// correction — even though LCS overlap stays high. Must learn nothing.
+    func testCorrectionDiffIgnoresLargeExpansion() {
+        let report = CorrectionDiff.newCandidates(
+            originalPaste: "Hi",
+            currentText: "Hi, I just met Anthropic and OpenAI and Deepgram at the conference in Tokyo today",
+            existingDictionary: [],
+            existingMemory: []
+        )
+        XCTAssertEqual(report.candidates, [],
+                       "Large expansion is new content, not a correction")
+    }
+
+    /// A genuine localized correction inside similar-length text still works
+    /// (guard must not be over-broad).
+    func testCorrectionDiffStillLearnsLocalizedEditAfterGuard() {
+        let report = CorrectionDiff.newCandidates(
+            originalPaste: "我約了陳一文開會",
+            currentText: "我約了陳依文開會",
+            existingDictionary: [],
+            existingMemory: []
+        )
+        XCTAssertTrue(report.candidates.contains("陳依文"))
+    }
+
+    // MARK: - CorrectionLearner.safeHint (privacy)
+
+    /// Secret-shaped tokens in the context hint are redacted.
+    func testSafeHintRedactsSecrets() {
+        let hint = CorrectionLearner.safeHint(from: "my key is sk-abc123def456ghi789jkl")
+        XCTAssertFalse(hint.contains("sk-abc123"))
+        XCTAssertTrue(hint.contains("•••"))
+    }
+
+    /// Ordinary dictation text is preserved (just truncated).
+    func testSafeHintKeepsOrdinaryText() {
+        let hint = CorrectionLearner.safeHint(from: "meeting notes for the team")
+        XCTAssertTrue(hint.hasPrefix("meeting notes"))
+    }
+
     // MARK: - STTBias (glossary → provider bias)
 
     /// Priority order is manual → memory → auto-learned, and duplicates are

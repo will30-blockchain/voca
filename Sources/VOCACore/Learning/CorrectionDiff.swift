@@ -42,6 +42,15 @@ public enum CorrectionDiff {
         guard !original.isEmpty else { return Report(candidates: [], overlap: 0) }
         guard !current.isEmpty else { return Report(candidates: [], overlap: 0) }
 
+        // Expansion guard: if the edited text is a large expansion of what we
+        // pasted (roughly doubled in length), the user is writing NEW content
+        // into the same field — not correcting our output. A high LCS overlap
+        // (all original tokens retained) would otherwise let us mine the
+        // freshly-typed prose for "corrections". Bail before that.
+        if currentText.count > originalPaste.count * 2 + 20 {
+            return Report(candidates: [], overlap: 0)
+        }
+
         let (lcsLen, added) = lcsDiff(original, current)
         let overlap = Double(lcsLen) / Double(original.count)
 

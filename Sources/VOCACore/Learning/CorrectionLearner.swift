@@ -167,7 +167,7 @@ public final class CorrectionLearner: ObservableObject {
             return
         }
 
-        let contextHint = String(pasted.prefix(60))
+        let contextHint = Self.safeHint(from: pasted)
         for term in report.candidates {
             // Confidence gate: a candidate must be seen `threshold` times
             // across separate dictations before it graduates to the
@@ -224,5 +224,16 @@ public final class CorrectionLearner: ObservableObject {
 
     public func clearLatest() {
         latest = nil
+    }
+
+    /// Build the short context hint stored alongside a learned term. The hint
+    /// is our own dictation output (the user spoke it), but redact any
+    /// secret-shaped token defensively and keep it short — it only exists to
+    /// remind the user where a term came from.
+    nonisolated static func safeHint(from text: String, max: Int = 40) -> String {
+        let redacted = text.split(separator: " ").map { word -> Substring in
+            CorrectionDiff.looksLikeSecret(String(word)) ? "•••" : word
+        }
+        return String(redacted.joined(separator: " ").prefix(max))
     }
 }
