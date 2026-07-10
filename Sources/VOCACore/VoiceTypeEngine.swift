@@ -343,9 +343,18 @@ public final class VOCAEngine: ObservableObject {
         let s = settingsStore.settings
         let provider = STTProviderFactory.make(id: s.sttProvider, credentials: s.credentials, session: urlSession)
 
-        let biasPieces: [String] = [dictionary.biasPrompt(), memory.topPhrases(limit: 12).joined(separator: ", ").nilIfEmpty]
-            .compactMap { $0 }
-        let prompt = biasPieces.isEmpty ? nil : "Glossary: " + biasPieces.joined(separator: " | ")
+        // Rank glossary sources into one structured term list. Most-recent
+        // dictionary entries first (higher relevance), manual before
+        // auto-learned (higher trust); each provider formats it to match its
+        // own bias mechanism. See STTBias.
+        let recentFirst = Array(dictionary.entries.reversed())
+        let manualTerms = recentFirst.filter { $0.source == .manual }.map { $0.term }
+        let autoTerms = recentFirst.filter { $0.source == .autoLearned }.map { $0.term }
+        let biasTerms = STTBias.orderedTerms(
+            manualTerms: manualTerms,
+            memoryPhrases: memory.topPhrases(limit: 20),
+            autoLearnedTerms: autoTerms
+        )
 
         // STT providers (Whisper, Deepgram) only understand the base
         // ISO-639-1 code, not script tags like "zh-Hant". Strip the script
@@ -358,7 +367,7 @@ public final class VOCAEngine: ObservableObject {
             mimeType: "audio/wav",
             filename: "audio.wav",
             language: sttLang,
-            prompt: prompt
+            biasTerms: biasTerms
         )
         return try await withTransientRetry(category: .stt, label: "transcribe") {
             try await provider.transcribe(req, model: s.sttModel)
@@ -502,8 +511,4 @@ public final class VOCAEngine: ObservableObject {
             return false
         }
     }
-}
-
-private extension String {
-    var nilIfEmpty: String? { isEmpty ? nil : self }
 }

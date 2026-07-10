@@ -37,6 +37,12 @@ public struct AppleSpeechProvider: STTProvider {
         let recognition = SFSpeechURLRecognitionRequest(url: tmp)
         recognition.requiresOnDeviceRecognition = true
         recognition.shouldReportPartialResults = false
+        // On-device biasing: Apple Speech ignores freeform prompts but honours
+        // `contextualStrings`. This is the only STT bias signal available
+        // offline. Cap defensively — the list arrives pre-ranked.
+        if !request.biasTerms.isEmpty {
+            recognition.contextualStrings = Array(request.biasTerms.prefix(100))
+        }
 
         return try await withCheckedThrowingContinuation { (cont: CheckedContinuation<STTResult, Error>) in
             let box = ContinuationBox(cont)

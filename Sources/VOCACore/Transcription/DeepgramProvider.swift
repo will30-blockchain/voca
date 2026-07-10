@@ -32,13 +32,13 @@ public struct DeepgramProvider: STTProvider {
         } else {
             queryItems.append(URLQueryItem(name: "detect_language", value: "true"))
         }
-        if let prompt = request.prompt, !prompt.isEmpty {
-            // Deepgram supports keyword biasing via "keywords" — best-effort split.
-            for word in prompt.split(separator: ",").prefix(50) {
-                let trimmed = word.trimmingCharacters(in: .whitespaces)
-                if !trimmed.isEmpty {
-                    queryItems.append(URLQueryItem(name: "keywords", value: trimmed))
-                }
+        // Deepgram biases via one `keywords` query item per term. The terms
+        // arrive already ranked, cleaned, and capped — pass them straight
+        // through (no string-splitting, so no label/joiner pollution).
+        for term in request.biasTerms.prefix(50) {
+            let trimmed = term.trimmingCharacters(in: .whitespaces)
+            if !trimmed.isEmpty {
+                queryItems.append(URLQueryItem(name: "keywords", value: trimmed))
             }
         }
         components.queryItems = queryItems

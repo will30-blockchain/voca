@@ -102,12 +102,6 @@ public final class UserDictionary: ObservableObject {
         save()
     }
 
-    /// Comma-joined list suitable for embedding in an STT bias prompt.
-    public func biasPrompt() -> String? {
-        guard !entries.isEmpty else { return nil }
-        return entries.map { $0.term }.joined(separator: ", ")
-    }
-
     private func save() {
         do {
             let data = try JSONEncoder().encode(entries)

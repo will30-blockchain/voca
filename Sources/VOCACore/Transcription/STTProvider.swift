@@ -11,8 +11,11 @@ public struct STTRequest: Sendable {
     public let filename: String
     /// Language hint or "auto".
     public let language: String
-    /// Optional prompt to bias transcription (used for glossary).
-    public let prompt: String?
+    /// Ranked, de-duplicated, capped glossary terms to bias transcription
+    /// with — most important FIRST. Each provider formats these to match its
+    /// own biasing mechanism (Whisper: freeform prompt; Deepgram: keywords;
+    /// Apple: contextualStrings). Build via `STTBias.orderedTerms`.
+    public let biasTerms: [String]
 
     public init(
         audio: Data,
@@ -20,14 +23,14 @@ public struct STTRequest: Sendable {
         mimeType: String = "audio/wav",
         filename: String = "audio.wav",
         language: String = "auto",
-        prompt: String? = nil
+        biasTerms: [String] = []
     ) {
         self.audio = audio
         self.sampleRate = sampleRate
         self.mimeType = mimeType
         self.filename = filename
         self.language = language
-        self.prompt = prompt
+        self.biasTerms = biasTerms
     }
 }
 

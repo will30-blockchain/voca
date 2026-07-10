@@ -318,4 +318,52 @@ final class VOCACoreTests: XCTestCase {
         XCTAssertEqual(report.candidates, [],
                        "Wholesale rewrite should NOT produce candidates")
     }
+
+    // MARK: - STTBias (glossary → provider bias)
+
+    /// Priority order is manual → memory → auto-learned, and duplicates are
+    /// collapsed case-insensitively keeping the highest-priority spelling.
+    func testSTTBiasOrdersByConfidenceAndDedupes() {
+        let terms = STTBias.orderedTerms(
+            manualTerms: ["Anthropic", "MLX"],
+            memoryPhrases: ["Tokyo", "anthropic"], // dup of manual, lower case
+            autoLearnedTerms: ["資料", "mlx"]        // dup of manual
+        )
+        XCTAssertEqual(terms, ["Anthropic", "MLX", "Tokyo", "資料"])
+    }
+
+    /// The term list must be hard-capped so it can never blow the STT window.
+    func testSTTBiasRespectsLimit() {
+        let many = (0..<100).map { "Term\($0)" }
+        let terms = STTBias.orderedTerms(
+            manualTerms: many, memoryPhrases: [], autoLearnedTerms: [], limit: 10
+        )
+        XCTAssertEqual(terms.count, 10)
+        XCTAssertEqual(terms.first, "Term0")
+    }
+
+    /// Whisper attends to the prompt tail, so the MOST important term (first
+    /// in the ranked input) must appear LAST in the emitted prompt.
+    func testWhisperPromptPlacesImportantTermLast() {
+        let prompt = STTBias.whisperPrompt(terms: ["MostImportant", "Least"])
+        let unwrapped = try! XCTUnwrap(prompt)
+        let importantIdx = try! XCTUnwrap(unwrapped.range(of: "MostImportant")).lowerBound
+        let leastIdx = try! XCTUnwrap(unwrapped.range(of: "Least")).lowerBound
+        XCTAssertTrue(leastIdx < importantIdx,
+                      "Least-important term should come before the most-important one")
+        XCTAssertTrue(unwrapped.hasSuffix("MostImportant."))
+    }
+
+    /// Empty input biases nothing (nil, not an empty-label string).
+    func testWhisperPromptNilWhenNoTerms() {
+        XCTAssertNil(STTBias.whisperPrompt(terms: []))
+        XCTAssertNil(STTBias.whisperPrompt(terms: ["   "]))
+    }
+
+    /// The prompt must stay within the character budget even with many terms.
+    func testWhisperPromptRespectsCharBudget() {
+        let many = (0..<200).map { "Term\($0)" }
+        let prompt = try! XCTUnwrap(STTBias.whisperPrompt(terms: many, maxChars: 120))
+        XCTAssertLessThanOrEqual(prompt.count, 120)
+    }
 }

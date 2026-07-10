@@ -29,7 +29,7 @@ public struct GroqWhisperProvider: STTProvider {
         if request.language != "auto" && !request.language.isEmpty {
             body.appendField("language", request.language)
         }
-        if let prompt = request.prompt, !prompt.isEmpty {
+        if let prompt = STTBias.whisperPrompt(terms: request.biasTerms) {
             body.appendField("prompt", prompt)
         }
         let payload = body.finalize()
