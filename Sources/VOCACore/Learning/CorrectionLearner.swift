@@ -28,8 +28,9 @@ public final class CorrectionLearner: ObservableObject {
     private let dictionary: UserDictionary
     private let memory: PersonalMemory
     private let log: LogStore
+    private let fieldReader: FieldReader
 
-    private var pendingSnapshot: AXTextReader.Snapshot?
+    private var pendingSnapshot: FieldSnapshot?
     private var pendingPasteText: String = ""
     /// Polling task that watches the focused AX field for edits and fires
     /// `reviewPendingPaste()` as soon as the user stops typing — so the
@@ -37,10 +38,16 @@ public final class CorrectionLearner: ObservableObject {
     /// *next* dictation. See `startEditWatch(snapshot:)`.
     private var watchTask: Task<Void, Never>?
 
-    public init(dictionary: UserDictionary, memory: PersonalMemory, log: LogStore) {
+    public init(
+        dictionary: UserDictionary,
+        memory: PersonalMemory,
+        log: LogStore,
+        fieldReader: FieldReader = AXFieldReader()
+    ) {
         self.dictionary = dictionary
         self.memory = memory
         self.log = log
+        self.fieldReader = fieldReader
     }
 
     /// Called from the engine right after a successful paste. Captures the
@@ -51,7 +58,7 @@ public final class CorrectionLearner: ObservableObject {
     public func recordPaste(_ text: String) {
         guard !text.isEmpty else { return }
         watchTask?.cancel()
-        if let snap = AXTextReader.snapshotFocusedField() {
+        if let snap = fieldReader.snapshotFocused() {
             pendingSnapshot = snap
             pendingPasteText = text
             log.info(.memory, "Captured paste for learning", detail: ["chars": "\(text.count)"])
@@ -72,8 +79,8 @@ public final class CorrectionLearner: ObservableObject {
     ///   - 60 s elapse without detecting a stable edit, or
     ///   - the AX element becomes unreadable (window closed, focus changed
     ///     into a non-text field, etc.).
-    private func startEditWatch(snapshot: AXTextReader.Snapshot) {
-        let initial = snapshot.valueAtPaste
+    private func startEditWatch(snapshot: FieldSnapshot) {
+        let initial = snapshot.valueAtCapture
         watchTask = Task { [weak self] in
             // Settle delay — the paste may not have landed in the AX tree
             // for a frame or two, and polling immediately is just noise.
@@ -87,7 +94,7 @@ public final class CorrectionLearner: ObservableObject {
                 if Task.isCancelled { return }
                 guard let self else { return }
 
-                guard let current = AXTextReader.currentValue(from: snapshot) else {
+                guard let current = self.fieldReader.reread(snapshot) else {
                     self.log.info(.memory, "Edit watcher: element no longer readable")
                     return
                 }
@@ -133,12 +140,12 @@ public final class CorrectionLearner: ObservableObject {
             return
         }
 
-        guard let current = AXTextReader.currentValue(from: snap) else {
+        guard let current = fieldReader.reread(snap) else {
             log.info(.memory, "Skipped correction review (could not re-read element)")
             return
         }
 
-        if current == snap.valueAtPaste {
+        if current == snap.valueAtCapture {
             // User didn't touch the field. Nothing to learn.
             return
         }
