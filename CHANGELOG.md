@@ -4,7 +4,27 @@ All notable changes to VOCA AI Typer are documented here. Format inspired by
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.1.0] — 2026-07-11
+
+First public open-source release.
+
+### Accuracy & auto-learn (post-review optimization)
+
+- **Structured, provider-aware STT glossary biasing.** The glossary is now
+  ranked, de-duplicated, and capped, and each provider formats it to match
+  its own bias mechanism: Whisper places the most important terms where it
+  attends (prompt tail) and stays inside its token window; Deepgram receives
+  clean `keywords` (previously polluted by the label/joiner text); Apple
+  Speech is wired to `contextualStrings` (bias was a no-op offline before).
+- **Confidence-gated learning.** A correction must recur (≥ 2 sightings)
+  before it's added to the dictionary, so a one-off edit — your own typo, an
+  unrelated edit, or an app reflow — no longer permanently biases dictation.
+  Especially important for Chinese, where any character fix used to learn a
+  common word on first sighting.
+- **Observability + attribution.** Capture-rate and promotion metrics make
+  the pipeline measurable; each learned fix is attributed to the STT vs LLM
+  stage. Plus expansion/size guards and secret redaction in stored metadata.
+  See [`docs/AUTO_LEARN_PLAN.md`](docs/AUTO_LEARN_PLAN.md).
 
 ### Typography & About
 
@@ -82,9 +102,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Replaced placeholder `your-org/voca-ai-typer` with the real repo
   `will30-blockchain/voca` across README and CONTRIBUTING.
 
-## [0.1.0] — 2026-05-15
+## Pre-release foundation — 2026-05-15
 
-Initial public release. Renamed from internal "VoiceType" → **VOCA**.
+The initial VOCA baseline (renamed from internal "VoiceType"), never tagged
+or published — folded into the 0.1.0 public release above.
 
 ### Added
 
