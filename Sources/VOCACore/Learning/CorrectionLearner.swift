@@ -29,6 +29,7 @@ public final class CorrectionLearner: ObservableObject {
     private let memory: PersonalMemory
     private let log: LogStore
     private let fieldReader: FieldReader
+    private let gate: CorrectionGate
 
     private var pendingSnapshot: FieldSnapshot?
     private var pendingPasteText: String = ""
@@ -42,12 +43,14 @@ public final class CorrectionLearner: ObservableObject {
         dictionary: UserDictionary,
         memory: PersonalMemory,
         log: LogStore,
-        fieldReader: FieldReader = AXFieldReader()
+        fieldReader: FieldReader = AXFieldReader(),
+        gate: CorrectionGate = CorrectionGate()
     ) {
         self.dictionary = dictionary
         self.memory = memory
         self.log = log
         self.fieldReader = fieldReader
+        self.gate = gate
     }
 
     /// Called from the engine right after a successful paste. Captures the
@@ -166,6 +169,18 @@ public final class CorrectionLearner: ObservableObject {
 
         let contextHint = String(pasted.prefix(60))
         for term in report.candidates {
+            // Confidence gate: a candidate must be seen `threshold` times
+            // across separate dictations before it graduates to the
+            // dictionary. A single edit is too noisy to trust (own typo,
+            // unrelated edit, app reflow — and for CJK it would learn common
+            // words on any correction).
+            guard gate.observe(term) else {
+                log.info(.memory, "Correction candidate held (needs another sighting)", detail: [
+                    "term": term,
+                    "seen": "\(gate.pendingCount(term))/\(LearningGate.defaultThreshold)"
+                ])
+                continue
+            }
             dictionary.add(term, note: "auto-learned from edit", source: .autoLearned)
             let entry = LearnedTerm(term: term, contextHint: contextHint)
             recent.insert(entry, at: 0)
@@ -189,6 +204,9 @@ public final class CorrectionLearner: ObservableObject {
         }
         recent.removeAll { $0.id == id }
         if latest?.id == id { latest = nil }
+        // Reset the gate so a stray future sighting doesn't instantly
+        // re-promote a term the user explicitly rejected.
+        gate.forget(entry.term)
         log.info(.memory, "Removed auto-learned term", detail: ["term": entry.term])
     }
 
@@ -200,6 +218,7 @@ public final class CorrectionLearner: ObservableObject {
         }
         recent.removeAll { $0.id == term.id }
         latest = nil
+        gate.forget(term.term)
         log.info(.memory, "Undid auto-learn", detail: ["term": term.term])
     }
 

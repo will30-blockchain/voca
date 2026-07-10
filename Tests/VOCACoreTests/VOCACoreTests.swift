@@ -366,4 +366,58 @@ final class VOCACoreTests: XCTestCase {
         let prompt = try! XCTUnwrap(STTBias.whisperPrompt(terms: many, maxChars: 120))
         XCTAssertLessThanOrEqual(prompt.count, 120)
     }
+
+    // MARK: - LearningGate (confidence gating)
+
+    /// A candidate must be seen `threshold` times before it promotes; the
+    /// first sighting is held.
+    func testLearningGateHoldsUntilThreshold() {
+        var gate = LearningGate(threshold: 2)
+        XCTAssertFalse(gate.observe("資料"), "first sighting should be held")
+        XCTAssertEqual(gate.pendingCount("資料"), 1)
+        XCTAssertTrue(gate.observe("資料"), "second sighting should promote")
+    }
+
+    /// Promotion clears the pending count so a later re-learn starts fresh.
+    func testLearningGateResetsAfterPromotion() {
+        var gate = LearningGate(threshold: 2)
+        _ = gate.observe("MLX")
+        XCTAssertTrue(gate.observe("MLX"))
+        XCTAssertEqual(gate.pendingCount("MLX"), 0, "count clears on promotion")
+        XCTAssertFalse(gate.observe("MLX"), "next sighting starts a fresh count")
+    }
+
+    /// Counting is case-insensitive — "Anthropic" and "anthropic" are one term.
+    func testLearningGateIsCaseInsensitive() {
+        var gate = LearningGate(threshold: 2)
+        XCTAssertFalse(gate.observe("Anthropic"))
+        XCTAssertTrue(gate.observe("anthropic"))
+    }
+
+    /// forget() drops pending state so a rejected term isn't instantly
+    /// re-promoted by a stray sighting.
+    func testLearningGateForgetResetsCount() {
+        var gate = LearningGate(threshold: 2)
+        _ = gate.observe("Tokyo")
+        gate.forget("tokyo")
+        XCTAssertEqual(gate.pendingCount("Tokyo"), 0)
+        XCTAssertFalse(gate.observe("Tokyo"), "after forget, needs threshold again")
+    }
+
+    /// A threshold of 1 promotes immediately (opt-out of gating).
+    func testLearningGateThresholdOnePromotesImmediately() {
+        var gate = LearningGate(threshold: 1)
+        XCTAssertTrue(gate.observe("X"))
+    }
+
+    /// The gate round-trips through Codable so pending counts survive relaunch.
+    func testLearningGateCodableRoundTrip() throws {
+        var gate = LearningGate(threshold: 3)
+        _ = gate.observe("foo")
+        _ = gate.observe("foo")
+        let data = try JSONEncoder().encode(gate)
+        var restored = try JSONDecoder().decode(LearningGate.self, from: data)
+        XCTAssertEqual(restored.pendingCount("foo"), 2)
+        XCTAssertTrue(restored.observe("foo"), "restored count promotes on 3rd")
+    }
 }
