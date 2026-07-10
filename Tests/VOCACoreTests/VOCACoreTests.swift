@@ -381,6 +381,15 @@ final class VOCACoreTests: XCTestCase {
         XCTAssertEqual(m.captureRate, 0.25, accuracy: 0.001)
     }
 
+    func testLearningMetricsAttributionFields() {
+        var m = LearningMetrics()
+        m.promotedSTTErrors = 2
+        m.promotedLLMEdits = 1
+        m.termsPromoted = 3
+        // STT-attributable fixes are the ones STT biasing can actually help.
+        XCTAssertEqual(m.promotedSTTErrors + m.promotedLLMEdits, m.termsPromoted)
+    }
+
     func testLearningMetricsSummaryAndCodable() throws {
         var m = LearningMetrics()
         m.captureAttempts = 2

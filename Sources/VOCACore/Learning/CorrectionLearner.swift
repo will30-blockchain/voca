@@ -34,6 +34,9 @@ public final class CorrectionLearner: ObservableObject {
 
     private var pendingSnapshot: FieldSnapshot?
     private var pendingPasteText: String = ""
+    /// Raw STT output for the pending paste (empty in translate mode). Used to
+    /// attribute a learned correction to the STT stage vs the LLM stage.
+    private var pendingRawSTT: String = ""
     /// Polling task that watches the focused AX field for edits and fires
     /// `reviewPendingPaste()` as soon as the user stops typing — so the
     /// "added to dictionary" toast appears in real time, not on the
@@ -61,12 +64,13 @@ public final class CorrectionLearner: ObservableObject {
     /// value and fires `reviewPendingPaste()` as soon as the user stops
     /// editing — so the user gets immediate feedback. `reviewPendingPaste`
     /// is *also* still called on the next dictation as a safety net.
-    public func recordPaste(_ text: String) {
+    public func recordPaste(_ text: String, rawSTT: String = "") {
         guard !text.isEmpty else { return }
         watchTask?.cancel()
         if let snap = fieldReader.snapshotFocused() {
             pendingSnapshot = snap
             pendingPasteText = text
+            pendingRawSTT = rawSTT
             metrics.recordCaptureAttempt(succeeded: true)
             log.info(.memory, "Captured paste for learning", detail: ["chars": "\(text.count)"])
             startEditWatch(snapshot: snap)
@@ -140,8 +144,10 @@ public final class CorrectionLearner: ObservableObject {
         watchTask?.cancel()
         guard let snap = pendingSnapshot else { return }
         let pasted = pendingPasteText
+        let rawSTT = pendingRawSTT
         pendingSnapshot = nil
         pendingPasteText = ""
+        pendingRawSTT = ""
 
         // Stale snapshots (>10 min) are unreliable; the user has likely moved on.
         let age = Date().timeIntervalSince(snap.capturedAt)
@@ -190,14 +196,22 @@ public final class CorrectionLearner: ObservableObject {
                 ])
                 continue
             }
-            metrics.recordPromoted()
+            // Attribute the fix to the pipeline stage responsible: if the
+            // corrected term already appeared in the raw STT output, the LLM
+            // changed it (STT bias won't help); otherwise STT mis-heard it.
+            // `nil` when raw STT is unavailable (translate mode).
+            let inRawSTT: Bool? = rawSTT.isEmpty
+                ? nil
+                : rawSTT.range(of: term, options: .caseInsensitive) != nil
+            metrics.recordPromoted(inRawSTT: inRawSTT)
             dictionary.add(term, note: "auto-learned from edit", source: .autoLearned)
             let entry = LearnedTerm(term: term, contextHint: contextHint)
             recent.insert(entry, at: 0)
             latest = entry
             log.info(.memory, "Auto-learned term", detail: [
                 "term": term,
-                "overlap": String(format: "%.2f", report.overlap)
+                "overlap": String(format: "%.2f", report.overlap),
+                "stage": inRawSTT == nil ? "n/a" : (inRawSTT! ? "llm-edit" : "stt-error")
             ])
         }
         recent = Array(recent.prefix(50))

@@ -20,6 +20,12 @@ public struct LearningMetrics: Codable, Sendable, Equatable {
     public var candidatesHeld: Int = 0
     /// A candidate cleared the gate and was persisted to the dictionary.
     public var termsPromoted: Int = 0
+    /// Of promoted terms: the term was ABSENT from the raw STT output, so the
+    /// STT mis-heard it (or it's new vocab) — STT biasing is the right lever.
+    public var promotedSTTErrors: Int = 0
+    /// Of promoted terms: the term was PRESENT in the raw STT output but the
+    /// LLM changed it — an LLM-refinement issue, not something STT bias fixes.
+    public var promotedLLMEdits: Int = 0
 
     public init() {}
 
@@ -69,8 +75,16 @@ public final class LearningMetricsStore {
         save()
     }
 
-    public func recordPromoted() {
+    /// Record a promotion, attributing it to the pipeline stage that produced
+    /// the error. `inRawSTT` = the corrected term already appeared in the raw
+    /// STT output (so the LLM, not STT, is responsible).
+    public func recordPromoted(inRawSTT: Bool?) {
         metrics.termsPromoted += 1
+        switch inRawSTT {
+        case .some(true): metrics.promotedLLMEdits += 1
+        case .some(false): metrics.promotedSTTErrors += 1
+        case .none: break // unknown (e.g. translate mode) — count only the total
+        }
         save()
     }
 

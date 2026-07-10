@@ -286,7 +286,11 @@ public final class VOCAEngine: ObservableObject {
             // Capture the focused text element NOW so we can re-read it on
             // the next dictation and learn from any typo corrections.
             if settingsStore.settings.learnFromCorrections {
-                learner.recordPaste(finalText)
+                // Pass the raw STT text (transcribe mode only) so the learner
+                // can attribute a correction to the STT vs LLM stage. In
+                // translate mode raw and output are different languages, so
+                // attribution doesn't apply.
+                learner.recordPaste(finalText, rawSTT: mode == .translate ? "" : raw.text)
             }
             if settingsStore.settings.learningEnabled {
                 memory.ingest(transcript: finalText)
