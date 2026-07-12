@@ -24,27 +24,20 @@ use; nothing is stored on someone else's server.
 
 ## Why VOCA
 
-- **Bring your own keys.** Groq, OpenAI, Anthropic, Deepgram, or fully offline
-  via Apple Speech. The cheapest pairing (Groq Whisper + Llama 3.3) costs a
-  fraction of a cent per dictation.
-- **LLM polish.** Drops filler words (English + Chinese disfluencies like
-  「嗯」「那個」「就是」), handles self-corrections ("I meant X" / 「不對是 X」
-  → keeps only X), auto-formats emails when it sees a greeting + sign-off,
-  and turns enumerated speech (「第一點…第二點…」 / "first…second…") into
-  proper numbered lists. Without inventing content.
-- **Personal dictionary that learns.** Names, acronyms, and jargon you say
-  often get added automatically when you fix a typo right after dictation,
-  Typeless-style. The bottom-of-screen toast confirms each catch ~3 s
-  after you stop editing, and Dashboard shows a running list with
-  per-row remove. Settings → Dictionary filters by *Auto / Manual* so you
-  can tell what VOCA learned itself from what you typed in.
-- **Pangu spacing.** Inserts a half-width space between CJK and Latin or
-  digits so mixed output reads naturally («用VOCA» → «用 VOCA»). Default
-  on, toggle in Settings → Languages → Typography.
-- **Translate mode.** Tap Right Option, then add Right Shift before
-  releasing, to dictate in one language and paste the translation in another.
-- **Flat, paper-like UI.** No glass effects, no glow, no AI sheen. Just
-  warm-white surfaces and SF Pro.
+- **Bring your own keys.** Groq, OpenAI, Anthropic, Deepgram — or fully
+  offline via Apple Speech. The cheapest pairing costs a fraction of a cent
+  per dictation.
+- **Polish, not just transcription.** An LLM drops fillers, resolves
+  self-corrections, shapes emails, and turns spoken lists into numbered
+  lists — without inventing content.
+- **A dictionary that learns.** Fix a typo right after dictation and VOCA
+  quietly adds the term, Typeless-style, so it gets it right next time.
+- **First-class Chinese.** Traditional / Simplified aware, code-switching
+  preserved, and Pangu spacing between CJK and Latin (用VOCA → 用 VOCA).
+- **Translate as you speak.** Dictate in one language, paste the translation
+  in another.
+- **Calm, native UI.** A real menu-bar app — no glass, no glow, no AI sheen.
+  Just warm-white surfaces and SF Pro.
 
 ## Features
 
