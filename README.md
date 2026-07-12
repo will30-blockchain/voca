@@ -41,7 +41,7 @@ use; nothing is stored on someone else's server.
 
 ## Features
 
-| | |
+| Feature | What it does |
 |---|---|
 | 🎙 Hotkey | Tap **Right Option** to start/stop dictation |
 | 🌐 Translate | Tap **Right Option**, add **Right Shift** before releasing |
@@ -56,11 +56,65 @@ use; nothing is stored on someone else's server.
 | ⎋ ESC | Press anywhere to cancel an in-progress recording |
 | 📋 Logs | Settings → Logs shows every pipeline step + per-stage latency |
 
-## Quickstart
+## Install
+
+Download the ready-to-run `.dmg` from
+[Releases](https://github.com/will30-blockchain/voca/releases) — no Xcode
+required. (Prefer to build it yourself? See [Build from source](#build-from-source).)
+
+VOCA is currently **self-signed** — there's no Apple Developer ID signature
+yet, so macOS Gatekeeper won't open it on a normal double-click. The one-time
+workaround is below; see [Distribution status](#distribution-status) for the
+plan to remove it.
+
+### First launch — bypass Gatekeeper
+
+1. Open the `.dmg` and drag `VOCA.app` into `/Applications`.
+2. In the Applications folder, **right-click (or Control-click)
+   `VOCA.app` → Open**.
+3. The dialog says *"macOS cannot verify the developer of VOCA."* Click
+   **Open** anyway — the button only appears via this right-click path.
+4. Done. VOCA opens with a normal double-click from now on; the right-click is
+   a once-per-install step.
+
+> **"App is damaged and can't be opened"?** The download's quarantine bit is
+> set. Clear it once, then retry the right-click:
+> ```bash
+> xattr -dr com.apple.quarantine /Applications/VOCA.app
+> ```
+> This removes only the quarantine flag — not the signature, contents, or any
+> permissions you've granted.
+
+### Grant permissions & add your key
+
+1. **Microphone** — macOS prompts the first time you press the hotkey.
+2. **Accessibility** — *System Settings → Privacy & Security → Accessibility*,
+   toggle VOCA on, then **quit and relaunch** (⌘Q, reopen). macOS only re-reads
+   Accessibility trust at launch, so the toggle does nothing without a restart.
+3. **API key** — Settings → Providers, paste your Groq key from
+   <https://console.groq.com/keys>.
+
+Then tap Right Option, speak, tap again — your text lands at the cursor.
+
+### Distribution status
+
+| Path | Status |
+|---|---|
+| Self-signed `.dmg` from GitHub Releases (right-click → Open) | ✅ Current |
+| Apple Developer ID signature + notarisation (double-click opens cleanly) | 🚧 Planned, requires $99/year Apple Developer Program |
+| Homebrew Cask | 🚧 Planned, after Developer ID lands |
+| Mac App Store | ❌ Not planned — App Sandbox rules effectively forbid global hotkeys + Accessibility |
+
+The right-click dance only exists because of the Developer ID gap. Once
+notarised builds are available, double-clicking just works.
+
+## Build from source
+
+For contributors, or to run the latest `main`.
 
 Prerequisites:
 - macOS 14 Sonoma or later
-- Xcode 15+ with Swift toolchain
+- Xcode 15+ with the Swift toolchain
 - A Groq, OpenAI, Anthropic, or Deepgram API key (or use Apple Speech offline)
 
 ```bash
@@ -70,6 +124,8 @@ cd voca
 ./scripts/build-app.sh       # build + sign VOCA.app
 open dist/VOCA.app
 ```
+
+Then follow [Grant permissions & add your key](#grant-permissions--add-your-key) above.
 
 ### What the build scripts touch on your machine
 
@@ -91,78 +147,6 @@ To wipe every trace, run `./scripts/uninstall-signing.sh`. (It also detects
 and cleans up a known bug in pre-2026-05 versions of `setup-signing.sh` that
 *permanently* polluted the user-wide keychain search list — that bug is
 fixed now.)
-
-On first launch:
-
-1. Grant **Microphone** access when prompted.
-2. Open System Settings → Privacy & Security → Accessibility, toggle VOCA on.
-3. Quit VOCA (⌘Q) and relaunch — macOS only refreshes Accessibility trust at
-   process start.
-4. Open VOCA's Settings → Providers, paste your Groq API key from
-   <https://console.groq.com/keys>.
-5. Tap Right Option, speak, tap again — your transcript is pasted at the
-   cursor.
-
-## Pre-built downloads
-
-Visit [Releases](https://github.com/will30-blockchain/voca/releases) for a
-ready-to-run `.dmg` of the latest version. No Xcode required.
-
-VOCA is currently **self-signed** — there is no Apple Developer ID
-signature yet (see the [Distribution status](#distribution-status) section
-below for the plan). Because of that, macOS Gatekeeper does **not**
-recognise the signature and will refuse to open the app on a normal
-double-click. This is expected. Here is what you do once.
-
-### First launch — bypassing Gatekeeper
-
-1. Download the `.dmg` from the latest release.
-2. Open the `.dmg` and drag `VOCA.app` into `/Applications`.
-3. Open Finder, go to the Applications folder.
-4. **Right-click (or Control-click) `VOCA.app` → Open.**
-5. A dialog says *"macOS cannot verify the developer of `VOCA`."* Click
-   **Open** anyway. (The button only appears via the right-click path,
-   not on a normal double-click.)
-6. From this point on, VOCA opens normally with a double-click. You only
-   need the right-click dance once per install.
-
-### "App is damaged and can't be opened"
-
-If macOS shows the *"damaged and can't be opened"* error instead of the
-right-click prompt, it means the app's quarantine bit was set during
-download and Gatekeeper is being extra strict. Run this once in Terminal,
-then try the right-click step again:
-
-```bash
-xattr -dr com.apple.quarantine /Applications/VOCA.app
-```
-
-This removes only the quarantine flag — it doesn't change the app's
-signature, contents, or any permissions you've granted.
-
-### Permissions on first run
-
-After the Gatekeeper bypass succeeds, VOCA will ask for two permissions:
-
-1. **Microphone** — required. macOS prompts you the first time you press
-   the hotkey.
-2. **Accessibility** — required so the global hotkey works in every app.
-   Open *System Settings → Privacy & Security → Accessibility*, toggle
-   VOCA on, then **quit and relaunch VOCA** (⌘Q then reopen). macOS only
-   re-reads Accessibility trust at process start, so the toggle does
-   nothing without a restart.
-
-### Distribution status
-
-| Path | Status |
-|---|---|
-| Self-signed `.dmg` from GitHub Releases (right-click → Open) | ✅ Current |
-| Apple Developer ID signature + notarisation (double-click opens cleanly) | 🚧 Planned, requires $99/year Apple Developer Program |
-| Homebrew Cask | 🚧 Planned, after Developer ID lands |
-| Mac App Store | ❌ Not planned — App Sandbox rules effectively forbid global hotkeys + Accessibility |
-
-The right-click dance only exists because of the Developer ID gap. Once
-notarised builds are available, normal double-clicking will just work.
 
 ## Architecture
 
