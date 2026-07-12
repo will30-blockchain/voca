@@ -16,9 +16,9 @@ Your speech, your API keys, your data.
 </div>
 
 VOCA is a native macOS menu-bar dictation and translation tool inspired by
-Typeless, but built around the principle that **your speech, your API keys,
-your data**. Pick the fastest, cheapest model on the market; pay only what you
-use; nothing is stored on someone else's server.
+Typeless. You bring your own API keys and pick the fastest, cheapest model on
+the market — pay only what you use, with nothing stored on someone else's
+server.
 
 ---
 
@@ -150,46 +150,27 @@ fixed now.)
 
 ## Architecture
 
+Two Swift packages. **`VOCACore`** is pure, AppKit-free domain logic — audio
+capture, STT/LLM provider clients, refinement, correction-learning, and
+JSON persistence. **`VOCA`** is the AppKit + SwiftUI menu-bar app. The
+pipeline — record → transcribe → refine → inject → learn — is orchestrated by
+`VoiceTypeEngine`.
+
 ```
 Sources/
-  VOCACore/                 — Pure-Swift, AppKit-free domain logic
-    Audio/                  — AVAudioEngine recorder + RMS meter + SoundPlayer
-    Hotkeys/                — CGEvent-tap based global tap-toggle hotkeys
-    Transcription/          — STT provider clients: Groq, OpenAI, Deepgram, Apple
-    LLM/                    — LLM provider clients: Groq, OpenAI, Anthropic
-    Refinement/             — Prompts, HallucinationFilter
-    Learning/               — CorrectionDiff, AXTextReader, CorrectionLearner
-    Memory/ Dictionary/     — File-backed JSON stores
-    History/ Logging/       — Transcript log + event log
-    Settings/ Util/         — Persistence helpers, SupportDirectory
-    Permissions/            — Mic + AX permission helpers
-    VoiceTypeEngine.swift   — Top-level pipeline orchestrator
-
-  VOCA/                     — macOS app (menu-bar, windows, HUD, toast)
-    AppDelegate · main · MenuBarController
-    DashboardWindow + DashboardView
-    HUDWindow + HUDView (floating pill with waveform / progress / retry)
-    ToastWindow             — "X added to dictionary" notification
-    Settings/               — 7 panes (General, Providers, Languages,
-                              Dictionary, Memory, Logs, About)
-    DesignTokens.swift      — Single source of truth for colours, type,
-                              spacing, radius. Inspired by SuperCard's
-                              "Professional Warmth".
-
-Tests/VOCACoreTests/        — Pure-Swift unit tests
-
-scripts/
-  setup-signing.sh          — Generates a stable self-signed cert in a
-                              project-local keychain (build/) so TCC
-                              remembers permissions across rebuilds
-  build-app.sh              — swift build + bundle + sign + .icns
-  uninstall-signing.sh      — Reverses setup-signing.sh; cleans up legacy
-                              state from older versions of the script
-  make-icon.sh              — sips logo.png → VOCA.icns
-  reset-permissions.sh      — tccutil reset for the bundle ID
+  VOCACore/           Audio · Hotkeys · Transcription · LLM · Refinement ·
+                      Learning · Memory · Dictionary · History · Logging ·
+                      Settings · Util · Permissions · VoiceTypeEngine
+  VOCA/               AppDelegate · MenuBar · Dashboard · HUD · Toast ·
+                      Settings (7 panes) · DesignTokens
+Tests/VOCACoreTests/  Pure-Swift unit tests
+scripts/              setup-signing · build-app · uninstall-signing · make-icon
 ```
 
-Read [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full design notes.
+The visual language follows SuperCard's "Professional Warmth" (warm-white
+surfaces, brand orange, SF Pro). For the full design notes see
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md); for the auto-learn accuracy
+roadmap see [`docs/AUTO_LEARN_PLAN.md`](docs/AUTO_LEARN_PLAN.md).
 
 ## Privacy
 
@@ -268,12 +249,10 @@ pair-programming sessions with Claude. The product itself is not an "AI
 app" in any user-facing sense; it's a voice-typing utility that happens
 to call AI APIs you choose.
 
-The visual language ("Professional Warmth" — warm-white surfaces, brand
-orange accent, SF Pro) is shared with the
-[SuperCard](https://github.com/will30-blockchain) family of apps.
-
-Original inspiration: [Typeless](https://typeless.io/), whose
-write-then-fix-and-learn UX shaped the dictionary auto-learn flow.
+The "Professional Warmth" visual language is shared with the
+[SuperCard](https://github.com/will30-blockchain) family of apps, and the
+write-then-fix-and-learn UX takes its cue from
+[Typeless](https://typeless.io/).
 
 ## License
 
