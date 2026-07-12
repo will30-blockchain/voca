@@ -1,18 +1,24 @@
-# VOCA — bring-your-own-key voice dictation for macOS
+<div align="center">
+
+<img src="Resources/logo.png" alt="VOCA" width="116" height="116" />
+
+# VOCA
+
+**Bring-your-own-key voice dictation for macOS**
+
+Speak, and clean typed text lands at your cursor — in any app.<br/>
+Your speech, your API keys, your data.
+
+[![macOS 14+](https://img.shields.io/badge/macOS-14%2B-black?logo=apple)](#)
+[![License: MIT](https://img.shields.io/badge/License-MIT-orange.svg)](LICENSE)
+[![Build](https://github.com/will30-blockchain/voca/actions/workflows/ci.yml/badge.svg)](https://github.com/will30-blockchain/voca/actions)
+
+</div>
 
 VOCA is a native macOS menu-bar dictation and translation tool inspired by
 Typeless, but built around the principle that **your speech, your API keys,
 your data**. Pick the fastest, cheapest model on the market; pay only what you
 use; nothing is stored on someone else's server.
-
-```
-   ▎▎█▎▎  ⌶
-   speech → typed text
-```
-
-[![macOS 14+](https://img.shields.io/badge/macOS-14%2B-black?logo=apple)](#)
-[![License: MIT](https://img.shields.io/badge/License-MIT-orange.svg)](LICENSE)
-[![Build](https://github.com/will30-blockchain/voca/actions/workflows/ci.yml/badge.svg)](https://github.com/will30-blockchain/voca/actions)
 
 ---
 
