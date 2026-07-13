@@ -4,10 +4,10 @@
 
 # VOCA
 
-**Bring-your-own-key voice dictation for macOS**
+**Custom-API voice dictation for macOS**
 
-Speak, and clean typed text lands at your cursor — in any app.<br/>
-Your speech, your API keys, your data.
+Speak, and clean typed text lands at your cursor, in any app.<br/>
+Your speech, API keys, and history all stay on your machine.
 
 [![macOS 14+](https://img.shields.io/badge/macOS-14%2B-black?logo=apple)](#)
 [![License: MIT](https://img.shields.io/badge/License-MIT-orange.svg)](LICENSE)
@@ -25,28 +25,29 @@ Your speech, your API keys, your data.
 
 </div>
 
-VOCA is a native macOS menu-bar dictation and translation tool. You bring
-your own API keys and pick the fastest, cheapest model on the market — pay
-only what you use, with nothing stored on someone else's server.
+VOCA is a native macOS menu-bar dictation and translation tool. You choose
+the API provider and model — the fastest and cheapest on the market — pay only
+for what you use, and your speech goes straight to that provider, never through
+a middleman.
 
 ---
 
 ## Why VOCA
 
-- **Bring your own keys.** Groq, OpenAI, Anthropic, Deepgram — or fully
-  offline via Apple Speech. The cheapest pairing costs a fraction of a cent
-  per dictation.
-- **Polish, not just transcription.** An LLM drops fillers, resolves
-  self-corrections, shapes emails, and turns spoken lists into numbered
-  lists — without inventing content.
-- **A dictionary that learns.** Fix a typo right after dictation and VOCA
-  quietly adds the term, so it gets it right next time.
-- **First-class Chinese.** Traditional / Simplified aware, code-switching
-  preserved, and Pangu spacing between CJK and Latin (用VOCA → 用 VOCA).
-- **Translate as you speak.** Dictate in one language, paste the translation
-  in another.
-- **Calm, native UI.** A real menu-bar app — no glass, no glow, no AI sheen.
-  Just warm-white surfaces and SF Pro.
+- **Custom API.** Groq, OpenAI, Anthropic, Deepgram, or fully offline via
+  Apple Speech. The cheapest pairing costs a fraction of a cent per dictation.
+- **Smart dictionary.** Fix a typo right after dictation and VOCA remembers
+  it, so the next transcript gets it right automatically.
+- **Chinese, optimized.** Traditional vs Simplified handled correctly,
+  code-switching preserved, and half-width spacing added automatically between
+  CJK characters and Latin or digits.
+- **Automatic formatting.** Detects a greeting and sign-off to lay text out as
+  an email, turns spoken lists into numbered lists, and strips fillers and
+  self-corrections.
+- **Instant translation.** Speak in one language, paste the translation in
+  another.
+- **Native interface.** A standard menu-bar app, with no glassmorphism, glow,
+  or AI sheen — just warm-white surfaces and SF Pro.
 
 ## Features
 
