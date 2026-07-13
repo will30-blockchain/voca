@@ -167,10 +167,10 @@ scripts/              setup-signing · build-app · uninstall-signing · make-ic
 
 - 語音資料不寫入磁碟，錄製的 WAV 檔案僅存於記憶體中，直接傳送至指定的
   供應商。
-- 目前版本（v1）的 API 金鑰以明文形式儲存於
-  `~/Library/Application Support/VOCA/settings.json`。Keychain 整合已列入
-  規劃，在此之前應將此檔案視為敏感資料處理。
-- 字典、記憶、歷史紀錄與日誌等其他資料，皆僅儲存於使用者本機。
+- API 金鑰儲存於 macOS Keychain，不會寫入設定檔。在自簽章版本上，首次讀取
+  各金鑰時 macOS 會詢問一次「VOCA 想使用鑰匙圈」，選擇「總是允許」後即不再
+  提示；待取得 Developer ID 與公證後將完全靜默。
+- 設定、字典、記憶、歷史紀錄與日誌等其他資料，皆僅儲存於使用者本機。
 - VOCA 不會傳送任何未經告知的資料，唯一的對外連線為使用者選定的供應商。
 
 ## 威脅模型
@@ -195,7 +195,7 @@ scripts/              setup-signing · build-app · uninstall-signing · make-ic
 
 ## 開發藍圖
 
-- [ ] 以 Keychain 儲存 API 金鑰
+- [x] 以 Keychain 儲存 API 金鑰
 - [ ] 可自訂快捷鍵
 - [ ] 串流即時逐字稿（Deepgram、OpenAI Realtime）
 - [ ] 透過 `whisper.cpp` 執行本地 Whisper，實現完全離線

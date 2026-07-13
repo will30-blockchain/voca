@@ -186,10 +186,12 @@ roadmap see [`docs/AUTO_LEARN_PLAN.md`](docs/AUTO_LEARN_PLAN.md).
 
 - Audio never touches disk. The recorded WAV lives in memory and is shipped
   directly to the provider you configured.
-- API keys live plain-text in `~/Library/Application Support/VOCA/settings.json`
-  for v1. **Keychain integration is on the roadmap.** Treat that file as
-  sensitive.
-- Everything else (dictionary, memory, history, logs) is local to your Mac.
+- API keys are stored in the macOS Keychain, never written to a config file.
+  On self-signed builds, macOS prompts once per key ("VOCA wants to access the
+  keychain"); choose "Always Allow" and it stops. A Developer ID + notarised
+  build will silence it entirely.
+- Everything else (settings, dictionary, memory, history, logs) is local to
+  your Mac.
 - VOCA never phones home. The only outbound HTTP requests are to the
   provider endpoints you select.
 
@@ -222,7 +224,7 @@ For vulnerability disclosure see [SECURITY.md](SECURITY.md).
 
 ## Roadmap
 
-- [ ] Keychain-backed API key storage
+- [x] Keychain-backed API key storage
 - [ ] Customisable hotkeys
 - [ ] Streaming partial transcripts (Deepgram, OpenAI Realtime)
 - [ ] Local Whisper via `whisper.cpp` for full offline mode
