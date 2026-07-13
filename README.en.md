@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="Resources/logo.png" alt="VOCA" width="116" height="116" />
+<img src="Resources/logo-hero.png" alt="VOCA" width="116" height="116" />
 
 # VOCA
 
@@ -25,10 +25,9 @@ Your speech, your API keys, your data.
 
 </div>
 
-VOCA is a native macOS menu-bar dictation and translation tool inspired by
-Typeless. You bring your own API keys and pick the fastest, cheapest model on
-the market — pay only what you use, with nothing stored on someone else's
-server.
+VOCA is a native macOS menu-bar dictation and translation tool. You bring
+your own API keys and pick the fastest, cheapest model on the market — pay
+only what you use, with nothing stored on someone else's server.
 
 ---
 
@@ -41,7 +40,7 @@ server.
   self-corrections, shapes emails, and turns spoken lists into numbered
   lists — without inventing content.
 - **A dictionary that learns.** Fix a typo right after dictation and VOCA
-  quietly adds the term, Typeless-style, so it gets it right next time.
+  quietly adds the term, so it gets it right next time.
 - **First-class Chinese.** Traditional / Simplified aware, code-switching
   preserved, and Pangu spacing between CJK and Latin (用VOCA → 用 VOCA).
 - **Translate as you speak.** Dictate in one language, paste the translation
@@ -260,9 +259,7 @@ app" in any user-facing sense; it's a voice-typing utility that happens
 to call AI APIs you choose.
 
 The "Professional Warmth" visual language is shared with the
-[SuperCard](https://github.com/will30-blockchain) family of apps, and the
-write-then-fix-and-learn UX takes its cue from
-[Typeless](https://typeless.io/).
+[SuperCard](https://github.com/will30-blockchain) family of apps.
 
 ## License
 
