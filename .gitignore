@@ -30,6 +30,8 @@ secrets/
 dictionary.json
 memory.json
 history.json
+learn_gate.json
+learn_metrics.json
 
 # Local design / icon experiments — kept out of the repo to avoid bloat.
 Resources/logo-variants/
