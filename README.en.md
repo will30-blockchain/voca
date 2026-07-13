@@ -15,6 +15,10 @@ Your speech, your API keys, your data.
 
 [繁體中文](README.md) · **English**
 
+<br/>
+
+<img src="Resources/screenshot.png" alt="VOCA Dashboard — idle, hotkeys, auto-learn" width="760" />
+
 </div>
 
 VOCA is a native macOS menu-bar dictation and translation tool inspired by

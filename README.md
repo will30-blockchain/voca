@@ -15,6 +15,10 @@
 
 **繁體中文** · [English](README.en.md)
 
+<br/>
+
+<img src="Resources/screenshot.png" alt="VOCA Dashboard —— 待命中、快捷鍵、自動學習" width="760" />
+
 </div>
 
 VOCA 是一款原生的 macOS 選單列（menu-bar）聽寫與翻譯工具，靈感來自
