@@ -52,18 +52,18 @@ only what you use, with nothing stored on someone else's server.
 
 | Feature | What it does |
 |---|---|
-| 🎙 Hotkey | Tap **Right Option** to start/stop dictation |
-| 🌐 Translate | Tap **Right Option**, add **Right Shift** before releasing |
-| 🔊 Live meter | RMS-driven waveform tells you the mic is actually capturing |
-| ⌥ Refine | LLM cleans punctuation, drops fillers, handles self-corrections |
-| ✉️ Email shape | Auto-formats when it sees a greeting + sign-off |
-| 1️⃣ Lists | 「第一點 / 第二點 / …」 → real numbered list |
-| 📖 Dictionary | Glossary biases STT and LLM editor. Auto-adds proper nouns when you correct a typo after pasting |
-| 🧠 Memory | Frequency-tracked phrases (≥ 2 uses), plus free-form personal facts |
-| ✦ Pangu spacing | Half-width space between CJK and Latin / digits (default on) |
-| ↻ Retry | Network blip mid-pipeline → audio stays buffered, retry on tap |
-| ⎋ ESC | Press anywhere to cancel an in-progress recording |
-| 📋 Logs | Settings → Logs shows every pipeline step + per-stage latency |
+| Hotkey | Tap **Right Option** to start/stop dictation |
+| Translate | Tap **Right Option**, add **Right Shift** before releasing |
+| Live meter | RMS-driven waveform tells you the mic is actually capturing |
+| Refine | LLM cleans punctuation, drops fillers, handles self-corrections |
+| Email shape | Auto-formats when it sees a greeting + sign-off |
+| Lists | 「第一點 / 第二點 / …」 → real numbered list |
+| Dictionary | Glossary biases STT and LLM editor. Auto-adds proper nouns when you correct a typo after pasting |
+| Memory | Frequency-tracked phrases (≥ 2 uses), plus free-form personal facts |
+| Pangu spacing | Half-width space between CJK and Latin / digits (default on) |
+| Retry | Network blip mid-pipeline → audio stays buffered, retry on tap |
+| ESC | Press anywhere to cancel an in-progress recording |
+| Logs | Settings → Logs shows every pipeline step + per-stage latency |
 
 ## Install
 
@@ -109,10 +109,10 @@ Then tap Right Option, speak, tap again — your text lands at the cursor.
 
 | Path | Status |
 |---|---|
-| Self-signed `.dmg` from GitHub Releases (right-click → Open) | ✅ Current |
-| Apple Developer ID signature + notarisation (double-click opens cleanly) | 🚧 Planned, requires $99/year Apple Developer Program |
-| Homebrew Cask | 🚧 Planned, after Developer ID lands |
-| Mac App Store | ❌ Not planned — App Sandbox rules effectively forbid global hotkeys + Accessibility |
+| Self-signed `.dmg` from GitHub Releases (right-click → Open) | Current |
+| Apple Developer ID signature + notarisation (double-click opens cleanly) | Planned, requires $99/year Apple Developer Program |
+| Homebrew Cask | Planned, after Developer ID lands |
+| Mac App Store | Not planned — App Sandbox rules effectively forbid global hotkeys + Accessibility |
 
 The right-click dance only exists because of the Developer ID gap. Once
 notarised builds are available, double-clicking just works.
