@@ -65,8 +65,7 @@ First public open-source release.
 - **Dictionary settings → source filter** — segmented control "All /
   Auto / Manual" so the user can review only the terms VOCA learned on
   its own. New `Source` column shows a `sparkles` icon for auto-learned
-  rows and a `pencil` for manual rows (mirrors Typeless's auto/manual
-  distinction).
+  rows and a `pencil` for manual rows (clear auto vs manual distinction).
 - `UserDictionary.Entry` gains a `source: Origin` field
   (`manual` / `autoLearned`). Backward-compatible decoder infers the
   source from legacy entries' note prefix.
@@ -91,8 +90,7 @@ First public open-source release.
   case, a **Distribution status** table, and a **Threat model** section
   describing what's in / out of scope.
 - README: **Acknowledgments** crediting Claude Code as the
-  pair-programming collaborator and the SuperCard design system /
-  Typeless as inspirations.
+  pair-programming collaborator and the SuperCard design system.
 - Defensive `.gitignore` patterns for `.env*`, `*.p12`, `*.cer`, `*.pem`,
   `*.key`, `*.keychain*`, `settings.json`, `log.jsonl`, `secrets/` so a
   stray real credentials file cannot be committed by accident.

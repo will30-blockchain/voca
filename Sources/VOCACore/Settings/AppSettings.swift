@@ -155,7 +155,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
     public var tone: String
     /// Whether to enable adaptive personal memory learning.
     public var learningEnabled: Bool
-    /// Whether to auto-add typo corrections to the dictionary (Typeless-style).
+    /// Whether to auto-add typo corrections to the dictionary.
     public var learnFromCorrections: Bool
     /// Whether the recording HUD should appear.
     public var showHUD: Bool

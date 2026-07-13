@@ -3,8 +3,8 @@ import Combine
 
 /// Watches the focused text field after a paste. On the next dictation,
 /// re-reads that field, diffs against what we pasted, and auto-adds new
-/// proper-noun-like tokens to the dictionary. Inspired by Typeless's
-/// "I noticed you changed X — added it to your dictionary" loop.
+/// proper-noun-like tokens to the dictionary — a "noticed you changed X,
+/// added it to your dictionary" learning loop.
 @MainActor
 public final class CorrectionLearner: ObservableObject {
     public struct LearnedTerm: Codable, Sendable, Identifiable, Equatable {

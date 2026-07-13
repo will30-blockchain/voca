@@ -6,7 +6,7 @@ import VOCACore
 /// Bottom-center strip that announces auto-learned dictionary terms.
 /// Positioned in the lower-middle of the screen (above the Dock) so it
 /// shows up near where the user just edited the pasted text — the
-/// previous top-right placement was easy to miss. Inspired by Typeless's
+/// previous top-right placement was easy to miss. Shows an
 /// "Added 'Anthropic' to your dictionary" prompt. Fades in when
 /// `learner.latest` changes, persists for 12 s, includes an Undo button,
 /// and can be dismissed manually.

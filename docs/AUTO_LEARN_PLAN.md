@@ -4,7 +4,7 @@ VOCA learns from corrections: after it pastes a dictation, it watches the
 focused field, and when you edit the text it diffs pasted-vs-edited and adds
 new terms to your glossary. That glossary then biases both the STT prompt and
 the LLM refinement. This document records the plan to raise its accuracy
-toward Typeless-level, and what has shipped.
+toward best-in-class dictation correction, and what has shipped.
 
 The plan was revised after an adversarial cross-review (two independent
 engineers). The original plan front-loaded a deterministic post-LLM
