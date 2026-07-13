@@ -224,13 +224,11 @@ VOCA 由開發者於業餘時間開發與維護。如認為本工具有實質幫
 
 ## 致謝
 
-VOCA 與 [Claude Code](https://claude.com/claude-code) 協作開發，架構、設計決策
-與大部分實作皆透過與 Claude 的結對程式設計反覆打磨而成。就使用者體驗而言，這
-並不是一款「AI 應用程式」，本質上是一款串接你所選 AI API 的語音輸入工具。
+VOCA 由 **Superdigital 超速雲端科技股份有限公司**與 **Wilson Chen** 開發與
+維護，架構、設計決策與大部分實作透過與
+[Claude Code](https://claude.com/claude-code) 的結對程式設計反覆打磨而成。
 
-視覺設計的「Professional Warmth」風格（暖白底色、品牌橘、SF Pro）與
-[SuperCard](https://github.com/will30-blockchain) 系列應用程式共用同一套設計
-語言。
+視覺設計參照 Superdigital 系列應用程式的品牌設計語言。
 
 ## 授權條款
 

@@ -254,15 +254,13 @@ For anything else, email **valley.mirror7602@eagereverest.com**.
 
 ## Acknowledgments
 
-VOCA was built collaboratively with
-[Claude Code](https://claude.com/claude-code) — architecture, design
-decisions, and most of the implementation were iterated through
-pair-programming sessions with Claude. The product itself is not an "AI
-app" in any user-facing sense; it's a voice-typing utility that happens
-to call AI APIs you choose.
+VOCA is built and maintained by **Superdigital** (超速雲端科技股份有限公司)
+and **Wilson Chen**, with architecture, design decisions, and most of the
+implementation iterated through pair-programming sessions with
+[Claude Code](https://claude.com/claude-code).
 
-The "Professional Warmth" visual language is shared with the
-[SuperCard](https://github.com/will30-blockchain) family of apps.
+The visual design follows the brand language of the Superdigital family of
+apps.
 
 ## License
 
