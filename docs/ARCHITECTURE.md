@@ -188,10 +188,19 @@ the same checklist as adding the provider itself.
 `AppSettings` struct is the source of truth — UI panes bind to it via an
 `@Observable` store wrapper.
 
-API keys are currently stored in plaintext inside `settings.json`.
-Keychain integration is on the roadmap (`README.md` → Roadmap). The file
-sits under `~/Library/Application Support/VOCA/` (user-only permissions),
-not in any cloud-synced location.
+API keys are stored in the macOS Keychain (`Keychain.swift`, generic-password
+items keyed by provider), never in `settings.json` — `ProviderCredentials`
+encodes to an empty object, and `SettingsStore` migrates any legacy plaintext
+keys out of older settings files on first launch. `settings.json` itself sits
+under `~/Library/Application Support/VOCA/` with user-only permissions, not in
+any cloud-synced location.
+
+The wrapper deliberately uses the legacy (non-data-protection) Keychain:
+the data-protection keychain needs a real Apple Team ID or a
+keychain-access-groups entitlement, which self-signed builds can't obtain
+(launchd rejects it with error 163). The trade-off is a one-time "VOCA wants
+to access the keychain" prompt per key on self-signed builds; a Developer ID +
+notarised build removes it.
 
 ## Concurrency model
 
