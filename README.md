@@ -17,6 +17,10 @@
 
 <br/>
 
+<img src="Resources/hud.png" alt="VOCA 錄音膠囊 —— 即時波形" width="560" />
+
+<br/><br/>
+
 <img src="Resources/screenshot.png" alt="VOCA Dashboard —— 待命中、快捷鍵、自動學習" width="760" />
 
 </div>

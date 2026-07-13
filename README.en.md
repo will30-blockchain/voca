@@ -17,6 +17,10 @@ Your speech, your API keys, your data.
 
 <br/>
 
+<img src="Resources/hud.png" alt="VOCA recording pill — live waveform" width="560" />
+
+<br/><br/>
+
 <img src="Resources/screenshot.png" alt="VOCA Dashboard — idle, hotkeys, auto-learn" width="760" />
 
 </div>
