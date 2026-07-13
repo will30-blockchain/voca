@@ -254,7 +254,7 @@ For anything else, email **valley.mirror7602@eagereverest.com**.
 
 ## Acknowledgments
 
-VOCA is built and maintained by **Superdigital** (超速雲端科技股份有限公司)
+VOCA is built and maintained by **Superdigital** (超數雲端科技股份有限公司)
 and **Wilson Chen**, with architecture, design decisions, and most of the
 implementation iterated through pair-programming sessions with
 [Claude Code](https://claude.com/claude-code).
