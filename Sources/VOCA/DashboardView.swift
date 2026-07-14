@@ -61,9 +61,12 @@ struct DashboardView: View {
 
     // MARK: - Header
 
-    /// Brand mark shown next to the title. Loaded once from the app bundle.
+    /// Brand mark shown next to the title. Loaded once from the app bundle's
+    /// Resources. Deliberately uses `Bundle.main` (not `Bundle.module`, whose
+    /// generated accessor fatalErrors when the resource bundle is missing) so
+    /// a missing asset degrades to "no logo" instead of crashing the app.
     private static let brandLogo: NSImage? = {
-        guard let url = Bundle.module.url(forResource: "logo", withExtension: "png") else { return nil }
+        guard let url = Bundle.main.url(forResource: "AppLogo", withExtension: "png") else { return nil }
         return NSImage(contentsOf: url)
     }()
 

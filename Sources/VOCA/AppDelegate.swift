@@ -39,7 +39,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // System Settings → Microphone (the request-only API can be missed
         // by TCC on ad-hoc / dev-signed builds).
         Task { _ = await Permissions.forceMicrophoneRegistration() }
-        _ = Permissions.requestAccessibility(prompt: true)
 
         menuBar = MenuBarController(
             engine: engine,
@@ -61,7 +60,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             // safe to fire on every ESC press globally.
             Task { await self?.engine.cancelRecording() }
         }
-        hotkeys.start()
+        // Accessibility gates the global hotkey tap. Prompt only ONCE, and
+        // only start the tap when already trusted — creating a session event
+        // tap while untrusted fails and can surface a *second* system prompt.
+        // macOS only re-reads AX trust at process start, so an untrusted user
+        // grants access and relaunches (the Dashboard shows a restart banner).
+        if Permissions.accessibilityTrusted {
+            hotkeys.start()
+        } else {
+            _ = Permissions.requestAccessibility(prompt: true)
+        }
 
         showDashboard()
         if !UserDefaults.standard.bool(forKey: "vt.didFirstRun") {
