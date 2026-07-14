@@ -4,6 +4,16 @@ All notable changes to VOCA AI Typer are documented here. Format inspired by
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.2] — 2026-07-15
+
+### Fixed
+
+- Fixed a launch crash introduced in 0.1.1: the in-app logo loaded through a
+  SwiftPM resource-bundle accessor that fatalErrors when the bundle isn't found
+  in the packaged app. The logo now loads from the app bundle directly.
+- The Accessibility permission request now prompts once on launch instead of
+  repeatedly.
+
 ## [0.1.1] — 2026-07-15
 
 ### Added
