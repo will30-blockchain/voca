@@ -145,11 +145,15 @@ if [[ "${USE_PROJECT_KEYCHAIN}" == "1" ]]; then
         "${APP_DIR}" >/dev/null
     # restore_search_list runs via trap on EXIT
 else
-    # Explicit identity (e.g. "-" for ad-hoc in CI). No keychain, no search-list
-    # manipulation — runs headlessly. The artifact is still opened via the
-    # documented right-click → Open Gatekeeper bypass.
-    echo "▸ Signing with identity '${SIGN_IDENTITY}' + entitlements (no keychain)"
-    codesign --force --deep --sign "${SIGN_IDENTITY}" \
+    # Explicit identity: "-" for ad-hoc (CI fallback), or a "Developer ID
+    # Application: …" identity for notarised release builds. Runs headlessly
+    # with no project keychain. A real identity gets a secure --timestamp
+    # (required by notarization); ad-hoc skips it (no Apple contact needed).
+    TS_FLAG=""
+    [ "${SIGN_IDENTITY}" != "-" ] && TS_FLAG="--timestamp"
+    echo "▸ Signing with identity '${SIGN_IDENTITY}' + entitlements (no project keychain)"
+    # shellcheck disable=SC2086
+    codesign --force --deep --sign "${SIGN_IDENTITY}" ${TS_FLAG} \
         --options runtime \
         --entitlements "${ENTITLEMENTS}" \
         "${APP_DIR}" >/dev/null

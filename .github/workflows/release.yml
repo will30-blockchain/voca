@@ -13,6 +13,12 @@ jobs:
     name: Build .app + .dmg and publish
     runs-on: macos-14
     timeout-minutes: 30
+    env:
+      # Empty when the secret is unset → the workflow falls back to ad-hoc
+      # signing (unnotarised, right-click-to-open). Add the secrets below and
+      # the next tagged release is automatically Developer-ID-signed + notarised.
+      HAS_SIGNING: ${{ secrets.DEVELOPER_ID_CERT_P12_BASE64 != '' }}
+      HAS_NOTARY: ${{ secrets.NOTARY_KEY_P8_BASE64 != '' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -28,18 +34,71 @@ jobs:
       - name: Install create-dmg
         run: brew install create-dmg
 
-      - name: Build VOCA.app (ad-hoc signed)
+      - name: Import Developer ID certificate
+        if: env.HAS_SIGNING == 'true'
+        env:
+          CERT_P12: ${{ secrets.DEVELOPER_ID_CERT_P12_BASE64 }}
+          CERT_PWD: ${{ secrets.DEVELOPER_ID_CERT_PASSWORD }}
+        run: |
+          KEYCHAIN="$RUNNER_TEMP/signing.keychain-db"
+          KP="$(uuidgen)"
+          echo "$CERT_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security create-keychain -p "$KP" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KP" "$KEYCHAIN"
+          security import "$RUNNER_TEMP/cert.p12" -k "$KEYCHAIN" -P "$CERT_PWD" \
+            -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KP" "$KEYCHAIN"
+          security list-keychains -d user -s "$KEYCHAIN" login.keychain-db
+          rm -f "$RUNNER_TEMP/cert.p12"
+          # Resolve the identity name so build-app.sh can sign with it.
+          IDENTITY=$(security find-identity -v -p codesigning "$KEYCHAIN" \
+            | grep "Developer ID Application" | head -1 | sed -E 's/.*"(.*)"/\1/')
+          echo "Resolved signing identity: $IDENTITY"
+          echo "SIGN_IDENTITY_RESOLVED=$IDENTITY" >> "$GITHUB_ENV"
+
+      - name: Build VOCA.app
         env:
           VERSION: ${{ steps.version.outputs.version }}
-          # Ad-hoc signing — no keychain/cert needed, runs headlessly. The
-          # interactive setup-signing.sh keychain flow hangs on CI runners.
-          SIGN_IDENTITY: "-"
+          # Developer ID when available, else ad-hoc ("-").
+          SIGN_IDENTITY: ${{ env.HAS_SIGNING == 'true' && env.SIGN_IDENTITY_RESOLVED || '-' }}
         run: ./scripts/build-app.sh
+
+      - name: Notarize & staple the app
+        if: env.HAS_NOTARY == 'true'
+        env:
+          NOTARY_KEY_P8: ${{ secrets.NOTARY_KEY_P8_BASE64 }}
+          NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
+          NOTARY_ISSUER: ${{ secrets.NOTARY_ISSUER_ID }}
+        run: |
+          echo "$NOTARY_KEY_P8" | base64 --decode > "$RUNNER_TEMP/AuthKey.p8"
+          ditto -c -k --keepParent dist/VOCA.app "$RUNNER_TEMP/VOCA.zip"
+          xcrun notarytool submit "$RUNNER_TEMP/VOCA.zip" \
+            --key "$RUNNER_TEMP/AuthKey.p8" \
+            --key-id "$NOTARY_KEY_ID" \
+            --issuer "$NOTARY_ISSUER" \
+            --wait
+          xcrun stapler staple dist/VOCA.app
 
       - name: Package DMG
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: ./scripts/make-dmg.sh "$VERSION"
+
+      - name: Notarize & staple the DMG
+        if: env.HAS_NOTARY == 'true'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
+          NOTARY_ISSUER: ${{ secrets.NOTARY_ISSUER_ID }}
+        run: |
+          xcrun notarytool submit "dist/VOCA-$VERSION.dmg" \
+            --key "$RUNNER_TEMP/AuthKey.p8" \
+            --key-id "$NOTARY_KEY_ID" \
+            --issuer "$NOTARY_ISSUER" \
+            --wait
+          xcrun stapler staple "dist/VOCA-$VERSION.dmg"
+          rm -f "$RUNNER_TEMP/AuthKey.p8"
 
       - name: Generate checksum
         env:
