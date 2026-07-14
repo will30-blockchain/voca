@@ -56,6 +56,12 @@ mkdir -p "${APP_DIR}/Contents/Resources"
 cp "${EXE_PATH}" "${APP_DIR}/Contents/MacOS/${APP_NAME}"
 chmod +x "${APP_DIR}/Contents/MacOS/${APP_NAME}"
 
+# Copy SwiftPM resource bundles (e.g. VOCA_VOCA.bundle, which holds the in-app
+# logo) into Resources/ so `Bundle.module` can find them at runtime.
+for res_bundle in "${BIN_PATH}"/*.bundle; do
+    [ -e "${res_bundle}" ] && cp -R "${res_bundle}" "${APP_DIR}/Contents/Resources/"
+done
+
 # Bundle icon. Rebuilds the .icns from Resources/logo.png if it's missing.
 if [[ ! -f Resources/VOCA.icns ]]; then
     "$(dirname "$0")/make-icon.sh"

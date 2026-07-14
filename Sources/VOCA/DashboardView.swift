@@ -61,8 +61,22 @@ struct DashboardView: View {
 
     // MARK: - Header
 
+    /// Brand mark shown next to the title. Loaded once from the app bundle.
+    private static let brandLogo: NSImage? = {
+        guard let url = Bundle.module.url(forResource: "logo", withExtension: "png") else { return nil }
+        return NSImage(contentsOf: url)
+    }()
+
     private var header: some View {
         HStack(alignment: .center, spacing: DesignTokens.Space.md) {
+            if let logo = Self.brandLogo {
+                Image(nsImage: logo)
+                    .resizable()
+                    .interpolation(.high)
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 44, height: 44)
+                    .accessibilityHidden(true)
+            }
             VStack(alignment: .leading, spacing: 2) {
                 Text(store.t(.appName))
                     .font(DesignTokens.Typography.display)
