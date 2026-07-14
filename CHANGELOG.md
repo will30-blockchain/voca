@@ -4,6 +4,20 @@ All notable changes to VOCA AI Typer are documented here. Format inspired by
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] — 2026-07-15
+
+### Added
+
+- The VOCA brand logo now appears beside the title in the Dashboard.
+
+### Docs
+
+- README is now bilingual — Traditional Chinese as the primary `README.md`,
+  English at `README.en.md` — with refreshed branding, screenshots, and a
+  social preview card.
+- Corrected the API-key storage docs: keys are stored in the macOS Keychain
+  (they already were; the docs previously said plaintext).
+
 ## [0.1.0] — 2026-07-11
 
 First public open-source release.
